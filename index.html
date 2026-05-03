@@ -65,7 +65,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(10, 10, 10, 0.7); /* Deixei mais claro para destacar as artes */
+            background: rgba(10, 10, 10, 0.35); /* BEM MAIS CLARO para ver as imagens perfeitamente */
             z-index: 1;
         }
 
@@ -77,9 +77,9 @@
         }
 
         header {
-            background-color: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(15, 15, 15, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             padding: 20px;
             text-align: center;
             border-bottom: 2px solid var(--primary-blue);
@@ -102,29 +102,50 @@
             margin-top: 5px;
         }
 
+        /* --- BANNER DE INSTALAÇÃO DO APP (FLUTUANTE) --- */
         #installBanner, #iosPrompt {
             display: none;
-            background: linear-gradient(90deg, rgba(22, 27, 34, 0.9), rgba(0, 123, 255, 0.8));
-            backdrop-filter: blur(5px);
-            padding: 15px;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            z-index: 9999;
+            background: rgba(0, 123, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
             text-align: center;
-            margin: 20px auto;
-            max-width: 800px;
-            border-radius: 8px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid var(--neon-blue);
+        }
+
+        #installBanner p, #iosPrompt p {
+            margin-bottom: 10px;
+            font-size: 1rem;
             font-weight: bold;
+            color: #fff;
         }
 
         #installBtn {
             background-color: var(--neon-blue);
             color: #000;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 10px 20px;
+            border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        #installBtn:hover {
+            background-color: #fff;
         }
 
+        /* --- GRID DE CATEGORIAS --- */
         .container {
             max-width: 1200px;
             margin: 30px auto;
@@ -135,9 +156,9 @@
         }
 
         .card {
-            background-color: rgba(22, 27, 34, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background-color: rgba(20, 20, 20, 0.4);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             padding: 25px 20px;
@@ -161,14 +182,9 @@
 
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 229, 255, 0.2);
-            border-color: var(--primary-blue);
-            background-color: rgba(22, 27, 34, 0.8);
-        }
-
-        .card:hover::before {
-            width: 100%;
-            opacity: 0.1;
+            box-shadow: 0 8px 25px rgba(0, 229, 255, 0.3);
+            border-color: var(--neon-blue);
+            background-color: rgba(20, 20, 20, 0.7);
         }
 
         .card h3 {
@@ -177,17 +193,18 @@
             font-size: 1.2rem;
             position: relative;
             z-index: 2;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .card p {
-            color: #e1e4e8;
+            color: #fff;
             font-size: 0.9rem;
             position: relative;
             z-index: 2;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
-        /* --- MODAIS COM EFEITO VIDRO (GLASSMORPHISM) --- */
+        /* --- MODAIS COM EFEITO VIDRO CRISTALINO --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -195,23 +212,23 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.3); /* Película bem leve */
+            background-color: rgba(0, 0, 0, 0.2); /* Sobreposição bem suave */
             z-index: 200;
             justify-content: center;
             align-items: center;
         }
 
         .modal {
-            /* Fundo transparente com desfoque para ver as imagens passando atrás */
-            background-color: rgba(22, 27, 34, 0.65); 
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            /* Fundo super transparente e desfoque leve para destacar as artes */
+            background-color: rgba(10, 10, 10, 0.3); 
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
             
             width: 90%;
             max-width: 400px;
             padding: 30px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(0, 229, 255, 0.4); /* Borda neon sutil */
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9);
             position: relative;
             max-height: 90vh;
@@ -220,7 +237,7 @@
 
         .modal.large {
             max-width: 900px;
-            background-color: #161b22; /* O painel de admin continua sólido para facilitar leitura */
+            background-color: rgba(15, 15, 15, 0.95); /* O painel de admin continua sólido para facilitar leitura da tabela */
             backdrop-filter: none;
         }
 
@@ -233,7 +250,7 @@
             cursor: pointer;
             background: none;
             border: none;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .close-btn:hover {
@@ -243,14 +260,14 @@
         .modal h2 {
             color: var(--neon-blue);
             margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
         }
 
         .modal p {
-            color: #e1e4e8;
-            font-size: 0.9rem;
+            color: #fff;
+            font-size: 0.95rem;
             margin-bottom: 20px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9);
         }
 
         .form-group {
@@ -262,16 +279,17 @@
             margin-bottom: 5px;
             font-size: 0.9rem;
             font-weight: bold;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.9);
         }
 
         .form-group input {
             width: 100%;
             padding: 12px;
             border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background-color: rgba(10, 10, 10, 0.8); /* Input levemente transparente */
-            color: var(--text-light);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background-color: rgba(0, 0, 0, 0.6); /* Input escuro mas transparente */
+            color: #fff;
             outline: none;
             font-size: 1rem;
         }
@@ -293,7 +311,7 @@
             cursor: pointer;
             margin-top: 10px;
             transition: all 0.3s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
         }
 
         .btn-submit:hover {
@@ -301,7 +319,7 @@
             color: #000;
         }
 
-        /* --- PAINEL ADMIN E BOTÃO WHATSAPP --- */
+        /* --- PAINEL ADMIN E RODAPÉ --- */
         footer {
             text-align: center;
             padding: 20px;
@@ -312,11 +330,12 @@
         .btn-admin-link {
             background: none;
             border: none;
-            color: var(--text-muted);
+            color: rgba(255,255,255,0.6);
             cursor: pointer;
             font-size: 0.8rem;
             text-decoration: underline;
             transition: color 0.3s;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }
 
         .btn-admin-link:hover {
@@ -339,7 +358,7 @@
 
         .admin-table th {
             color: var(--primary-blue);
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.4);
         }
 
         .admin-empty {
@@ -355,10 +374,8 @@
 
         .btn-danger:hover {
             background-color: #cc0000;
-            color: white;
         }
 
-        /* Botão Chamar no WhatsApp da tabela */
         .btn-whats {
             display: inline-flex;
             align-items: center;
@@ -415,12 +432,14 @@
             <p>Selecione o tipo de projeto</p>
         </header>
 
+        <!-- AVISOS DE PWA FLUTUANTES NO RODAPÉ -->
         <div id="installBanner">
-            <p>Instale o ChronoGraphic no seu celular!</p>
-            <button id="installBtn">Instalar App</button>
+            <p>Transforme o ChronoGraphic em App!</p>
+            <button id="installBtn">Instalar Agora</button>
         </div>
         <div id="iosPrompt">
-            <p>Para instalar no iOS: toque em <b>Compartilhar</b> <svg width="15" height="15" viewBox="0 0 50 50" fill="white"><path d="M25 2L12 16h8v16h10V16h8L25 2zm-12 34v6h24v-6h4v6c0 2.21-1.79 4-4 4H13c-2.21 0-4-1.79-4-4v-6h4z"/></svg> e depois <b>Adicionar à Tela de Início</b>.</p>
+            <p>Instale no iOS:</p>
+            <p style="font-weight: normal; font-size: 0.9rem;">Toque em <b>Compartilhar</b> <svg width="15" height="15" viewBox="0 0 50 50" fill="white" style="vertical-align: middle;"><path d="M25 2L12 16h8v16h10V16h8L25 2zm-12 34v6h24v-6h4v6c0 2.21-1.79 4-4 4H13c-2.21 0-4-1.79-4-4v-6h4z"/></svg><br> e <b>Adicionar à Tela de Início</b>.</p>
         </div>
 
         <main class="container">
@@ -459,12 +478,12 @@
         <button class="btn-admin-link" onclick="abrirLoginAdmin()">Área do Administrador</button>
     </footer>
 
-    <!-- Modal de Pedido (Com efeito Vidro) -->
+    <!-- Modal de Pedido -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
             <button class="close-btn" onclick="fecharModal('modal')">&times;</button>
             <h2 id="modalTitle">Pedido</h2>
-            <p>Preencha os dados e as artes continuam passando no fundo!</p>
+            <p>Preencha os dados (as artes estão rolando no fundo!).</p>
             <form id="orderForm" onsubmit="enviarPedido(event)">
                 <input type="hidden" id="serviceType">
                 <div class="form-group">
@@ -507,7 +526,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT TIPO MÓDULO PARA SUPORTAR FIREBASE NA WEB -->
+    <!-- SCRIPT FIREBASE E PWA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
@@ -525,7 +544,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Background slider animado
+        // Background slider
         const bgSlides = document.querySelectorAll('.bg-slide');
         let bgAtual = 0;
         setInterval(() => {
@@ -563,16 +582,14 @@
                     timestamp: Date.now()
                 });
 
-                // Número do SEU whatsapp para receber o aviso inicial
-                const meuNumero = "5500000000000"; 
+                const meuNumero = "5500000000000"; // COLOQUE SEU NUMERO AQUI
                 const texto = `Olá! Meu nome é ${nome}. Tenho interesse em um orçamento para: *${servico}*. Meu WhatsApp de contato é ${whatsapp}.`;
                 window.open(`https://wa.me/${meuNumero}?text=${encodeURIComponent(texto)}`, '_blank');
                 
                 window.fecharModal('modal');
                 document.getElementById('orderForm').reset();
             } catch (error) {
-                alert("Erro de conexão com o banco de dados. " + error.message);
-                console.error("Firebase Error:", error);
+                alert("Erro de conexão. Verifique as regras do Firebase. " + error.message);
             } finally {
                 btn.innerText = "Enviar via WhatsApp";
                 btn.disabled = false;
@@ -586,9 +603,7 @@
 
         window.verificarSenha = function(event) {
             event.preventDefault();
-            const senhaDigitada = document.getElementById('senhaAdmin').value;
-
-            if (senhaDigitada === 'gustavo2026') {
+            if (document.getElementById('senhaAdmin').value === 'gustavo2026') {
                 window.fecharModal('modalLogin');
                 carregarPainelAdmin();
             } else {
@@ -598,100 +613,60 @@
 
         async function carregarPainelAdmin() {
             const divLista = document.getElementById('listaPedidos');
-            divLista.innerHTML = '<div class="admin-empty">Conectando à nuvem para buscar os pedidos...</div>';
+            divLista.innerHTML = '<div class="admin-empty">Buscando na nuvem...</div>';
             document.getElementById('modalPainel').style.display = 'flex';
 
             try {
                 const q = query(collection(db, "pedidos"), orderBy("timestamp", "desc"));
                 const querySnapshot = await getDocs(q);
-                
                 let bancoPedidos = [];
-                querySnapshot.forEach((doc) => {
-                    bancoPedidos.push({ id: doc.id, ...doc.data() });
-                });
+                querySnapshot.forEach((doc) => { bancoPedidos.push({ id: doc.id, ...doc.data() }); });
 
                 if (bancoPedidos.length === 0) {
-                    divLista.innerHTML = '<div class="admin-empty">Nenhum pedido registrado no banco de dados.</div>';
+                    divLista.innerHTML = '<div class="admin-empty">Nenhum pedido registrado no banco.</div>';
                 } else {
-                    let htmlTabela = `
-                        <div style="overflow-x:auto;">
-                            <table class="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th>Data / Hora</th>
-                                        <th>Cliente</th>
-                                        <th>Contato</th>
-                                        <th>Serviço</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-
+                    let htmlTabela = `<div style="overflow-x:auto;"><table class="admin-table"><thead><tr><th>Data</th><th>Cliente</th><th>Contato</th><th>Serviço</th></tr></thead><tbody>`;
                     bancoPedidos.forEach(pedido => {
-                        // Limpa o número de telefone (remove traços, espaços, parênteses)
-                        let numLimpo = pedido.whatsapp.replace(/\\D/g, '');
-                        // Se o usuário não digitou o 55 (código do Brasil) e tem mais de 10 dígitos, a gente adiciona
-                        if (!numLimpo.startsWith('55') && numLimpo.length >= 10) {
-                            numLimpo = '55' + numLimpo;
-                        }
+                        let numLimpo = pedido.whatsapp.replace(/\D/g, '');
+                        if (!numLimpo.startsWith('55') && numLimpo.length >= 10) numLimpo = '55' + numLimpo;
+                        let msgAdmin = encodeURIComponent(`Olá ${pedido.nome}, recebi seu pedido de orçamento para ${pedido.servico}. Como posso ajudar?`);
 
-                        // Mensagem padrão que o admin vai enviar pro cliente
-                        let msgAdmin = encodeURIComponent(`Olá ${pedido.nome}, recebi seu pedido de orçamento para ${pedido.servico} através do site ChronoGraphic. Como posso te ajudar hoje?`);
-
-                        htmlTabela += `
-                            <tr>
-                                <td>${pedido.data}</td>
-                                <td><strong>${pedido.nome}</strong></td>
-                                <td>
-                                    ${pedido.whatsapp}
-                                    <br>
-                                    <a href="https://wa.me/${numLimpo}?text=${msgAdmin}" target="_blank" class="btn-whats">
-                                        <svg viewBox="0 0 24 24">
-                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-                                        </svg>
-                                        Chamar
-                                    </a>
-                                </td>
-                                <td><span style="background:var(--primary-blue); padding:3px 8px; border-radius:12px; font-size:0.8rem;">${pedido.servico}</span></td>
-                            </tr>
-                        `;
+                        htmlTabela += `<tr>
+                            <td>${pedido.data}</td>
+                            <td><strong>${pedido.nome}</strong></td>
+                            <td>${pedido.whatsapp}<br>
+                                <a href="https://wa.me/${numLimpo}?text=${msgAdmin}" target="_blank" class="btn-whats">
+                                    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                                    Chamar
+                                </a>
+                            </td>
+                            <td><span style="background:var(--primary-blue); padding:3px 8px; border-radius:12px; font-size:0.8rem;">${pedido.servico}</span></td>
+                        </tr>`;
                     });
-
                     htmlTabela += `</tbody></table></div>`;
                     divLista.innerHTML = htmlTabela;
                 }
             } catch (error) {
-                divLista.innerHTML = `<div class="admin-empty" style="color:var(--danger-red);">Erro de permissão no banco de dados. Lembre-se de liberar as regras de segurança do Firestore!</div>`;
-                console.error(error);
+                divLista.innerHTML = `<div class="admin-empty" style="color:var(--danger-red);">Erro ao buscar pedidos.</div>`;
             }
         }
 
         window.limparPedidos = async function() {
-            if(confirm('Atenção: Isso vai excluir todos os dados permanentemente da nuvem. Deseja continuar?')) {
+            if(confirm('Isso vai excluir os dados permanentemente. Continuar?')) {
                 try {
                     const querySnapshot = await getDocs(collection(db, "pedidos"));
                     const promessasDeletar = [];
-                    
-                    querySnapshot.forEach((documento) => {
-                        promessasDeletar.push(deleteDoc(doc(db, "pedidos", documento.id)));
-                    });
-                    
+                    querySnapshot.forEach((docSnap) => { promessasDeletar.push(deleteDoc(doc(db, "pedidos", docSnap.id))); });
                     await Promise.all(promessasDeletar);
-                    alert("Banco de dados formatado com sucesso.");
+                    alert("Banco formatado.");
                     carregarPainelAdmin();
-                } catch (error) {
-                    alert("Falha ao apagar documentos. Verifique console.");
-                }
+                } catch (error) { alert("Falha ao apagar."); }
             }
         }
 
         // --- LÓGICA DO PWA ---
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => {
-                    console.log('Falha no SW', err);
-                });
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW falhou')); });
         }
 
         let deferredPrompt;
@@ -702,29 +677,22 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            installBanner.style.display = 'block';
+            installBanner.style.display = 'block'; // Mostra o banner na base da tela
         });
 
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBanner.style.display = 'none';
-                }
+                if (outcome === 'accepted') installBanner.style.display = 'none';
                 deferredPrompt = null;
             }
         });
 
-        const isIos = () => {
-            const userAgent = window.navigator.userAgent.toLowerCase();
-            return /iphone|ipad|ipod/.test(userAgent);
-        }
-        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
-
-        if (isIos() && !isInStandaloneMode()) {
-            iosPrompt.style.display = 'block';
-        }
+        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && window.navigator.standalone;
+        
+        if (isIos() && !isInStandaloneMode()) iosPrompt.style.display = 'block';
     </script>
 </body>
 </html>
