@@ -15,6 +15,7 @@
             --text-light: #f0f6fc;
             --text-muted: #8b949e;
             --danger-red: #ff4444;
+            --success-green: #25D366;
         }
 
         * {
@@ -108,7 +109,6 @@
             margin: 25px auto 10px auto;
         }
 
-        /* O CONTAINER COMEÇA ESCONDIDO */
         #installContainer {
             display: none; 
         }
@@ -314,6 +314,16 @@
             color: #000;
         }
 
+        /* --- BOTÃO DE SUCESSO --- */
+        .btn-success {
+            background-color: var(--success-green);
+        }
+
+        .btn-success:hover {
+            background-color: #128C7E;
+            color: white;
+        }
+
         /* --- PAINEL ADMIN E RODAPÉ --- */
         footer {
             text-align: center;
@@ -487,8 +497,19 @@
                     <label for="whatsapp">WhatsApp</label>
                     <input type="tel" id="whatsapp" placeholder="(11) 90000-0000" required>
                 </div>
-                <button type="submit" class="btn-submit">Enviar via WhatsApp</button>
+                <button type="submit" class="btn-submit">Enviar Pedido</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso (Novo) -->
+    <div class="modal-overlay" id="modalSucesso">
+        <div class="modal" style="text-align: center;">
+            <button class="close-btn" onclick="fecharModal('modalSucesso')">&times;</button>
+            <h2 style="color: var(--success-green); margin-bottom: 15px; text-shadow: none;">Pedido Concluído! 🎉</h2>
+            <p>Recebemos as informações do seu projeto com sucesso.</p>
+            <p>Nossa equipe entrará em contato com você via WhatsApp em breve para conversar sobre o orçamento.</p>
+            <button class="btn-submit btn-success" onclick="fecharModal('modalSucesso')">OK, Entendi!</button>
         </div>
     </div>
 
@@ -574,17 +595,16 @@
                     data: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
                     timestamp: Date.now()
                 });
-
-                const meuNumero = "5500000000000"; // COLOQUE SEU NÚMERO AQUI
-                const texto = `Olá! Meu nome é ${nome}. Tenho interesse em um orçamento para: *${servico}*. Meu WhatsApp de contato é ${whatsapp}.`;
-                window.open(`https://wa.me/${meuNumero}?text=${encodeURIComponent(texto)}`, '_blank');
                 
+                // Fecha o modal de pedido, reseta o formulário e abre a tela de SUCESSO
                 window.fecharModal('modal');
                 document.getElementById('orderForm').reset();
+                document.getElementById('modalSucesso').style.display = 'flex';
+
             } catch (error) {
                 alert("Erro de conexão. Verifique as regras do Firebase. " + error.message);
             } finally {
-                btn.innerText = "Enviar via WhatsApp";
+                btn.innerText = "Enviar Pedido";
                 btn.disabled = false;
             }
         }
