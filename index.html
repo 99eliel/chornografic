@@ -9,12 +9,12 @@
     <title>ChronoGraphic | Pedidos de Design</title>
     
     <style>
-        /* Variáveis de Cores: Azul e Preto */
         :root {
             --primary-blue: #007bff;
             --neon-blue: #00e5ff;
             --text-light: #f0f6fc;
             --text-muted: #8b949e;
+            --danger-red: #ff4444;
         }
 
         * {
@@ -27,8 +27,10 @@
         body {
             color: var(--text-light);
             min-height: 100vh;
-            padding-bottom: 40px;
-            overflow-x: hidden; /* Evita rolagem horizontal */
+            padding-bottom: 20px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         /* --- BACKGROUND SLIDER ANIMADO --- */
@@ -38,7 +40,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: -1; /* Fica atrás de tudo */
+            z-index: -1;
             background-color: #000;
         }
 
@@ -50,34 +52,33 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 1s ease-in-out; /* Transição suave */
+            transition: opacity 1s ease-in-out;
         }
 
         .bg-slide.active {
             opacity: 1;
         }
 
-        /* Camada escura para dar leitura ao texto */
         .bg-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(10, 10, 10, 0.85); /* Preto com 85% de opacidade */
+            background: rgba(10, 10, 10, 0.7); /* Deixei mais claro para destacar as artes */
             z-index: 1;
         }
 
         /* --- CONTEÚDO PRINCIPAL --- */
         .main-content {
             position: relative;
-            z-index: 2; /* Fica acima do background */
+            z-index: 2;
+            flex-grow: 1;
         }
 
-        /* Cabeçalho */
         header {
             background-color: rgba(22, 27, 34, 0.7);
-            backdrop-filter: blur(10px); /* Efeito de vidro */
+            backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             padding: 20px;
             text-align: center;
@@ -101,7 +102,6 @@
             margin-top: 5px;
         }
 
-        /* Banner de Instalação PWA */
         #installBanner, #iosPrompt {
             display: none;
             background: linear-gradient(90deg, rgba(22, 27, 34, 0.9), rgba(0, 123, 255, 0.8));
@@ -125,7 +125,6 @@
             margin-top: 10px;
         }
 
-        /* Grid de Categorias */
         .container {
             max-width: 1200px;
             margin: 30px auto;
@@ -136,8 +135,8 @@
         }
 
         .card {
-            background-color: rgba(22, 27, 34, 0.6); /* Transparente */
-            backdrop-filter: blur(12px); /* Efeito de vidro */
+            background-color: rgba(22, 27, 34, 0.6);
+            backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
@@ -188,7 +187,7 @@
             z-index: 2;
         }
 
-        /* Modal de Pedido */
+        /* --- MODAIS COM EFEITO VIDRO (GLASSMORPHISM) --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -196,22 +195,33 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(5px);
+            background-color: rgba(0, 0, 0, 0.3); /* Película bem leve */
             z-index: 200;
             justify-content: center;
             align-items: center;
         }
 
         .modal {
-            background-color: #161b22;
+            /* Fundo transparente com desfoque para ver as imagens passando atrás */
+            background-color: rgba(22, 27, 34, 0.65); 
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            
             width: 90%;
             max-width: 400px;
             padding: 30px;
             border-radius: 12px;
-            border: 1px solid var(--primary-blue);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9);
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal.large {
+            max-width: 900px;
+            background-color: #161b22; /* O painel de admin continua sólido para facilitar leitura */
+            backdrop-filter: none;
         }
 
         .close-btn {
@@ -219,25 +229,28 @@
             top: 15px;
             right: 20px;
             font-size: 1.5rem;
-            color: var(--text-muted);
+            color: #fff;
             cursor: pointer;
             background: none;
             border: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .close-btn:hover {
-            color: var(--neon-blue);
+            color: var(--danger-red);
         }
 
         .modal h2 {
             color: var(--neon-blue);
             margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .modal p {
-            color: var(--text-muted);
+            color: #e1e4e8;
             font-size: 0.9rem;
             margin-bottom: 20px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
         .form-group {
@@ -248,20 +261,24 @@
             display: block;
             margin-bottom: 5px;
             font-size: 0.9rem;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         }
 
         .form-group input {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
-            border: 1px solid #30363d;
-            background-color: #0a0a0a;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background-color: rgba(10, 10, 10, 0.8); /* Input levemente transparente */
             color: var(--text-light);
             outline: none;
+            font-size: 1rem;
         }
 
         .form-group input:focus {
-            border-color: var(--primary-blue);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
         }
 
         .btn-submit {
@@ -275,20 +292,105 @@
             font-size: 1rem;
             cursor: pointer;
             margin-top: 10px;
-            transition: background 0.3s;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
         }
 
         .btn-submit:hover {
             background-color: var(--neon-blue);
             color: #000;
         }
+
+        /* --- PAINEL ADMIN E BOTÃO WHATSAPP --- */
+        footer {
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .btn-admin-link {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: underline;
+            transition: color 0.3s;
+        }
+
+        .btn-admin-link:hover {
+            color: var(--neon-blue);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.95rem;
+        }
+
+        .admin-table th, .admin-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #30363d;
+            vertical-align: middle;
+        }
+
+        .admin-table th {
+            color: var(--primary-blue);
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .admin-empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-red);
+            margin-top: 20px;
+        }
+
+        .btn-danger:hover {
+            background-color: #cc0000;
+            color: white;
+        }
+
+        /* Botão Chamar no WhatsApp da tabela */
+        .btn-whats {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: #25D366;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background 0.3s;
+            margin-top: 5px;
+        }
+
+        .btn-whats:hover {
+            background-color: #128C7E;
+        }
+
+        .btn-whats svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
     </style>
 </head>
 <body>
 
+    <!-- BACKGROUND ANIMADO -->
     <div class="bg-slider-container">
         <div class="bg-overlay"></div>
-        
         <img src="https://i.imgur.com/Hx4Y00g.jpg" class="bg-slide active" alt="bg">
         <img src="https://i.imgur.com/woCRGeM.jpg" class="bg-slide" alt="bg">
         <img src="https://i.imgur.com/i6atljr.jpg" class="bg-slide" alt="bg">
@@ -306,6 +408,7 @@
         <img src="https://i.imgur.com/UIGervF.jpg" class="bg-slide" alt="bg">
     </div>
 
+    <!-- CONTEÚDO PRINCIPAL -->
     <div class="main-content">
         <header>
             <h1>ChronoGraphic</h1>
@@ -352,92 +455,241 @@
         </main>
     </div>
 
+    <footer>
+        <button class="btn-admin-link" onclick="abrirLoginAdmin()">Área do Administrador</button>
+    </footer>
+
+    <!-- Modal de Pedido (Com efeito Vidro) -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
-            <button class="close-btn" onclick="fecharModal()">&times;</button>
+            <button class="close-btn" onclick="fecharModal('modal')">&times;</button>
             <h2 id="modalTitle">Pedido</h2>
-            <p>Preencha para iniciar o contato.</p>
-            
+            <p>Preencha os dados e as artes continuam passando no fundo!</p>
             <form id="orderForm" onsubmit="enviarPedido(event)">
                 <input type="hidden" id="serviceType">
-                
                 <div class="form-group">
                     <label for="nome">Seu Nome</label>
                     <input type="text" id="nome" placeholder="Digite seu nome" required>
                 </div>
-                
                 <div class="form-group">
                     <label for="whatsapp">WhatsApp</label>
-                    <input type="tel" id="whatsapp" placeholder="(00) 00000-0000" required>
+                    <input type="tel" id="whatsapp" placeholder="(11) 90000-0000" required>
                 </div>
-
                 <button type="submit" class="btn-submit">Enviar via WhatsApp</button>
             </form>
         </div>
     </div>
 
-    <script>
-        // --- LÓGICA DO BACKGROUND ANIMADO ---
+    <!-- Modal de Login -->
+    <div class="modal-overlay" id="modalLogin">
+        <div class="modal">
+            <button class="close-btn" onclick="fecharModal('modalLogin')">&times;</button>
+            <h2>Acesso Restrito</h2>
+            <p>Digite a senha para ver os pedidos.</p>
+            <form onsubmit="verificarSenha(event)">
+                <div class="form-group">
+                    <label for="senhaAdmin">Senha</label>
+                    <input type="password" id="senhaAdmin" placeholder="Digite a senha" required>
+                </div>
+                <button type="submit" class="btn-submit">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Painel Admin -->
+    <div class="modal-overlay" id="modalPainel">
+        <div class="modal large">
+            <button class="close-btn" onclick="fecharModal('modalPainel')">&times;</button>
+            <h2>Pedidos Recebidos</h2>
+            <p>Lista de clientes puxada direto do Firebase.</p>
+            <div id="listaPedidos"></div>
+            <button class="btn-submit btn-danger" onclick="limparPedidos()">Limpar Histórico no Banco de Dados</button>
+        </div>
+    </div>
+
+    <!-- SCRIPT TIPO MÓDULO PARA SUPORTAR FIREBASE NA WEB -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAqUJYK3L0e77NYh_hE176CY3SV-jg3-Yc",
+            authDomain: "chornografic.firebaseapp.com",
+            projectId: "chornografic",
+            storageBucket: "chornografic.firebasestorage.app",
+            messagingSenderId: "685211286639",
+            appId: "1:685211286639:web:9444cca8dfe2e46222e19a",
+            measurementId: "G-RXNCY69R7Y"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Background slider animado
         const bgSlides = document.querySelectorAll('.bg-slide');
         let bgAtual = 0;
-
-        // Função que troca a imagem a cada 2000 milissegundos (2 segundos)
         setInterval(() => {
-            // Remove a classe 'active' da imagem atual, escondendo-a
             bgSlides[bgAtual].classList.remove('active');
-            
-            // Vai para a próxima (se for a última, volta para a primeira)
             bgAtual = (bgAtual + 1) % bgSlides.length;
-            
-            // Adiciona a classe 'active' na nova imagem, mostrando-a
             bgSlides[bgAtual].classList.add('active');
         }, 2000);
 
-        // --- LÓGICA DO MODAL E FORMULÁRIO ---
-        const modal = document.getElementById('modal');
-        const modalTitle = document.getElementById('modalTitle');
-        const serviceTypeInput = document.getElementById('serviceType');
-
-        function abrirModal(servico) {
-            modalTitle.innerText = servico;
-            serviceTypeInput.value = servico;
-            modal.style.display = 'flex';
+        window.fecharModal = function(idModal) {
+            document.getElementById(idModal).style.display = 'none';
         }
 
-        function fecharModal() {
-            modal.style.display = 'none';
+        window.abrirModal = function(servico) {
+            document.getElementById('modalTitle').innerText = servico;
+            document.getElementById('serviceType').value = servico;
+            document.getElementById('modal').style.display = 'flex';
         }
 
-        function enviarPedido(event) {
+        window.enviarPedido = async function(event) {
             event.preventDefault();
             const nome = document.getElementById('nome').value;
             const whatsapp = document.getElementById('whatsapp').value;
             const servico = document.getElementById('serviceType').value;
-
-            // Formata a mensagem para enviar direto pro SEU WhatsApp
-            const meuNumero = "5500000000000"; // COLOQUE SEU NÚMERO AQUI
-            const texto = `Olá! Meu nome é ${nome}. Tenho interesse em um orçamento para: *${servico}*. Meu WhatsApp de contato é ${whatsapp}.`;
+            const btn = document.querySelector('#orderForm .btn-submit');
             
-            const url = `https://wa.me/${meuNumero}?text=${encodeURIComponent(texto)}`;
-            window.open(url, '_blank');
-            fecharModal();
-            document.getElementById('orderForm').reset();
-        }
+            btn.innerText = "Salvando pedido...";
+            btn.disabled = true;
 
-        // Fecha o modal clicando fora dele
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                fecharModal();
+            try {
+                await addDoc(collection(db, "pedidos"), {
+                    nome: nome,
+                    whatsapp: whatsapp,
+                    servico: servico,
+                    data: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
+                    timestamp: Date.now()
+                });
+
+                // Número do SEU whatsapp para receber o aviso inicial
+                const meuNumero = "5500000000000"; 
+                const texto = `Olá! Meu nome é ${nome}. Tenho interesse em um orçamento para: *${servico}*. Meu WhatsApp de contato é ${whatsapp}.`;
+                window.open(`https://wa.me/${meuNumero}?text=${encodeURIComponent(texto)}`, '_blank');
+                
+                window.fecharModal('modal');
+                document.getElementById('orderForm').reset();
+            } catch (error) {
+                alert("Erro de conexão com o banco de dados. " + error.message);
+                console.error("Firebase Error:", error);
+            } finally {
+                btn.innerText = "Enviar via WhatsApp";
+                btn.disabled = false;
             }
         }
 
-        // --- LÓGICA DO PWA (Service Worker, Android e iOS) ---
+        window.abrirLoginAdmin = function() {
+            document.getElementById('senhaAdmin').value = '';
+            document.getElementById('modalLogin').style.display = 'flex';
+        }
+
+        window.verificarSenha = function(event) {
+            event.preventDefault();
+            const senhaDigitada = document.getElementById('senhaAdmin').value;
+
+            if (senhaDigitada === 'gustavo2026') {
+                window.fecharModal('modalLogin');
+                carregarPainelAdmin();
+            } else {
+                alert('Senha incorreta!');
+            }
+        }
+
+        async function carregarPainelAdmin() {
+            const divLista = document.getElementById('listaPedidos');
+            divLista.innerHTML = '<div class="admin-empty">Conectando à nuvem para buscar os pedidos...</div>';
+            document.getElementById('modalPainel').style.display = 'flex';
+
+            try {
+                const q = query(collection(db, "pedidos"), orderBy("timestamp", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                let bancoPedidos = [];
+                querySnapshot.forEach((doc) => {
+                    bancoPedidos.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (bancoPedidos.length === 0) {
+                    divLista.innerHTML = '<div class="admin-empty">Nenhum pedido registrado no banco de dados.</div>';
+                } else {
+                    let htmlTabela = `
+                        <div style="overflow-x:auto;">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data / Hora</th>
+                                        <th>Cliente</th>
+                                        <th>Contato</th>
+                                        <th>Serviço</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    bancoPedidos.forEach(pedido => {
+                        // Limpa o número de telefone (remove traços, espaços, parênteses)
+                        let numLimpo = pedido.whatsapp.replace(/\\D/g, '');
+                        // Se o usuário não digitou o 55 (código do Brasil) e tem mais de 10 dígitos, a gente adiciona
+                        if (!numLimpo.startsWith('55') && numLimpo.length >= 10) {
+                            numLimpo = '55' + numLimpo;
+                        }
+
+                        // Mensagem padrão que o admin vai enviar pro cliente
+                        let msgAdmin = encodeURIComponent(`Olá ${pedido.nome}, recebi seu pedido de orçamento para ${pedido.servico} através do site ChronoGraphic. Como posso te ajudar hoje?`);
+
+                        htmlTabela += `
+                            <tr>
+                                <td>${pedido.data}</td>
+                                <td><strong>${pedido.nome}</strong></td>
+                                <td>
+                                    ${pedido.whatsapp}
+                                    <br>
+                                    <a href="https://wa.me/${numLimpo}?text=${msgAdmin}" target="_blank" class="btn-whats">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+                                        </svg>
+                                        Chamar
+                                    </a>
+                                </td>
+                                <td><span style="background:var(--primary-blue); padding:3px 8px; border-radius:12px; font-size:0.8rem;">${pedido.servico}</span></td>
+                            </tr>
+                        `;
+                    });
+
+                    htmlTabela += `</tbody></table></div>`;
+                    divLista.innerHTML = htmlTabela;
+                }
+            } catch (error) {
+                divLista.innerHTML = `<div class="admin-empty" style="color:var(--danger-red);">Erro de permissão no banco de dados. Lembre-se de liberar as regras de segurança do Firestore!</div>`;
+                console.error(error);
+            }
+        }
+
+        window.limparPedidos = async function() {
+            if(confirm('Atenção: Isso vai excluir todos os dados permanentemente da nuvem. Deseja continuar?')) {
+                try {
+                    const querySnapshot = await getDocs(collection(db, "pedidos"));
+                    const promessasDeletar = [];
+                    
+                    querySnapshot.forEach((documento) => {
+                        promessasDeletar.push(deleteDoc(doc(db, "pedidos", documento.id)));
+                    });
+                    
+                    await Promise.all(promessasDeletar);
+                    alert("Banco de dados formatado com sucesso.");
+                    carregarPainelAdmin();
+                } catch (error) {
+                    alert("Falha ao apagar documentos. Verifique console.");
+                }
+            }
+        }
+
+        // --- LÓGICA DO PWA ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    console.log('Service Worker registrado!', reg);
-                }).catch(err => {
-                    console.log('Falha no Service Worker', err);
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('Falha no SW', err);
                 });
             });
         }
