@@ -142,10 +142,42 @@
             fill: currentColor;
         }
 
+        /* --- BOTÃO MODELOS PRONTOS --- */
+        .btn-modelos {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: var(--neon-blue);
+            border: 2px solid var(--neon-blue);
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            margin: 10px auto 30px auto;
+        }
+
+        .btn-modelos:hover {
+            background-color: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
+        }
+
+        .btn-modelos svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
         /* --- GRID DE CATEGORIAS --- */
         .container {
             max-width: 1200px;
-            margin: 20px auto 30px auto;
+            margin: 20px auto 10px auto;
             padding: 0 20px;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -209,7 +241,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.2); 
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(3px);
             z-index: 200;
             justify-content: center;
             align-items: center;
@@ -217,8 +250,8 @@
 
         .modal {
             background-color: rgba(10, 10, 10, 0.3); 
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             width: 90%;
             max-width: 400px;
             padding: 30px;
@@ -246,6 +279,7 @@
             background: none;
             border: none;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
         }
 
         .close-btn:hover {
@@ -437,7 +471,7 @@
             <p>Selecione o tipo de projeto</p>
         </header>
 
-        <!-- SEÇÃO DO BOTÃO DE INSTALAÇÃO (Controlado 100% pelo Android) -->
+        <!-- SEÇÃO DO BOTÃO DE INSTALAÇÃO -->
         <div class="install-section" id="installContainer">
             <button id="mainInstallBtn" class="btn-install">
                 <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
@@ -445,6 +479,7 @@
             </button>
         </div>
 
+        <!-- GRID DE SERVIÇOS -->
         <main class="container">
             <div class="card" onclick="abrirModal('Identidade Visual')">
                 <h3>Identidade Visual</h3>
@@ -475,11 +510,36 @@
                 <p>Sinalização e Espaços</p>
             </div>
         </main>
+
+        <!-- NOVO BOTÃO DE MODELOS PRONTOS -->
+        <div style="text-align: center;">
+            <button class="btn-modelos" onclick="abrirModalModelos()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>
+                </svg>
+                Veja meus modelos prontos
+            </button>
+        </div>
     </div>
 
     <footer>
         <button class="btn-admin-link" onclick="abrirLoginAdmin()">Área do Administrador</button>
     </footer>
+
+    <!-- NOVO MODAL: MODELOS PRONTOS (ÁLBUM IMGUR) -->
+    <div class="modal-overlay" id="modalModelos">
+        <div class="modal large" style="padding: 20px;">
+            <button class="close-btn" onclick="fecharModal('modalModelos')">&times;</button>
+            <h2 style="text-align: center; margin-bottom: 15px;">Portfólio</h2>
+            <!-- Container do Imgur embed -->
+            <div style="width: 100%; border-radius: 8px; overflow: hidden; background: #000;">
+                <blockquote class="imgur-embed-pub" lang="en" data-id="a/Gn7RLzk">
+                    <a href="//imgur.com/a/Gn7RLzk">Projeto Website</a>
+                </blockquote>
+                <script async src="//s.imgur.com/min/embed.js" charset="utf-8"></script>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal de Pedido -->
     <div class="modal-overlay" id="modal">
@@ -502,7 +562,7 @@
         </div>
     </div>
 
-    <!-- Modal de Sucesso (Novo) -->
+    <!-- Modal de Sucesso -->
     <div class="modal-overlay" id="modalSucesso">
         <div class="modal" style="text-align: center;">
             <button class="close-btn" onclick="fecharModal('modalSucesso')">&times;</button>
@@ -540,7 +600,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT FIREBASE E LÓGICA DO PWA (NATIVA) -->
+    <!-- SCRIPT FIREBASE E LÓGICA DO PWA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
@@ -577,6 +637,11 @@
             document.getElementById('modal').style.display = 'flex';
         }
 
+        // Função para abrir o novo modal do Imgur
+        window.abrirModalModelos = function() {
+            document.getElementById('modalModelos').style.display = 'flex';
+        }
+
         window.enviarPedido = async function(event) {
             event.preventDefault();
             const nome = document.getElementById('nome').value;
@@ -596,7 +661,6 @@
                     timestamp: Date.now()
                 });
                 
-                // Fecha o modal de pedido, reseta o formulário e abre a tela de SUCESSO
                 window.fecharModal('modal');
                 document.getElementById('orderForm').reset();
                 document.getElementById('modalSucesso').style.display = 'flex';
@@ -677,7 +741,7 @@
             }
         }
 
-        // --- LÓGICA DO PWA (NATIVA) ---
+        // --- LÓGICA DO PWA ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW falhou')); });
         }
@@ -686,15 +750,12 @@
         const installContainer = document.getElementById('installContainer');
         const mainInstallBtn = document.getElementById('mainInstallBtn');
 
-        // O evento mágico do Android. Ele SÓ roda se o site estiver aprovado pelo Chrome.
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // Se o Chrome liberou, o botão aparece na tela.
             installContainer.style.display = 'block';
         });
 
-        // Clique no botão -> Sobe a tela nativa de instalação
         mainInstallBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
