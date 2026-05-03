@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>ChronoGraphic | Pedidos de Design</title>
+    
+    <style>
+        /* Variáveis de Cores: Azul e Preto */
+        :root {
+            --primary-blue: #007bff;
+            --neon-blue: #00e5ff;
+            --text-light: #f0f6fc;
+            --text-muted: #8b949e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            color: var(--text-light);
+            min-height: 100vh;
+            padding-bottom: 40px;
+            overflow-x: hidden; /* Evita rolagem horizontal */
+        }
+
+        /* --- BACKGROUND SLIDER ANIMADO --- */
+        .bg-slider-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1; /* Fica atrás de tudo */
+            background-color: #000;
+        }
+
+        .bg-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out; /* Transição suave */
+        }
+
+        .bg-slide.active {
+            opacity: 1;
+        }
+
+        /* Camada escura para dar leitura ao texto */
+        .bg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.85); /* Preto com 85% de opacidade */
+            z-index: 1;
+        }
+
+        /* --- CONTEÚDO PRINCIPAL --- */
+        .main-content {
+            position: relative;
+            z-index: 2; /* Fica acima do background */
+        }
+
+        /* Cabeçalho */
+        header {
+            background-color: rgba(22, 27, 34, 0.7);
+            backdrop-filter: blur(10px); /* Efeito de vidro */
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--primary-blue);
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            color: var(--neon-blue);
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        header p {
+            color: #d1d5da;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Banner de Instalação PWA */
+        #installBanner, #iosPrompt {
+            display: none;
+            background: linear-gradient(90deg, rgba(22, 27, 34, 0.9), rgba(0, 123, 255, 0.8));
+            backdrop-filter: blur(5px);
+            padding: 15px;
+            text-align: center;
+            margin: 20px auto;
+            max-width: 800px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        #installBtn {
+            background-color: var(--neon-blue);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Grid de Categorias */
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: rgba(22, 27, 34, 0.6); /* Transparente */
+            backdrop-filter: blur(12px); /* Efeito de vidro */
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background-color: var(--primary-blue);
+            transition: width 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 229, 255, 0.2);
+            border-color: var(--primary-blue);
+            background-color: rgba(22, 27, 34, 0.8);
+        }
+
+        .card:hover::before {
+            width: 100%;
+            opacity: 0.1;
+        }
+
+        .card h3 {
+            color: var(--neon-blue);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .card p {
+            color: #e1e4e8;
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Modal de Pedido */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal {
+            background-color: #161b22;
+            width: 90%;
+            max-width: 400px;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--primary-blue);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close-btn:hover {
+            color: var(--neon-blue);
+        }
+
+        .modal h2 {
+            color: var(--neon-blue);
+            margin-bottom: 5px;
+        }
+
+        .modal p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background-color: #0a0a0a;
+            color: var(--text-light);
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary-blue);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--neon-blue);
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-slider-container">
+        <div class="bg-overlay"></div>
+        
+        <img src="https://i.imgur.com/Hx4Y00g.jpg" class="bg-slide active" alt="bg">
+        <img src="https://i.imgur.com/woCRGeM.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/i6atljr.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/vad9VgM.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/3kTiUD2.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/AzcXVhY.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/2Mlp1tK.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/nRIGASP.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/rTFx5vJ.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/yAICVGv.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/rytu7Xs.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/hIDkrBO.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/QEkFjrH.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/HwbBdB6.jpg" class="bg-slide" alt="bg">
+        <img src="https://i.imgur.com/UIGervF.jpg" class="bg-slide" alt="bg">
+    </div>
+
+    <div class="main-content">
+        <header>
+            <h1>ChronoGraphic</h1>
+            <p>Selecione o tipo de projeto</p>
+        </header>
+
+        <div id="installBanner">
+            <p>Instale o ChronoGraphic no seu celular!</p>
+            <button id="installBtn">Instalar App</button>
+        </div>
+        <div id="iosPrompt">
+            <p>Para instalar no iOS: toque em <b>Compartilhar</b> <svg width="15" height="15" viewBox="0 0 50 50" fill="white"><path d="M25 2L12 16h8v16h10V16h8L25 2zm-12 34v6h24v-6h4v6c0 2.21-1.79 4-4 4H13c-2.21 0-4-1.79-4-4v-6h4z"/></svg> e depois <b>Adicionar à Tela de Início</b>.</p>
+        </div>
+
+        <main class="container">
+            <div class="card" onclick="abrirModal('Identidade Visual')">
+                <h3>Identidade Visual</h3>
+                <p>Logos e Branding</p>
+            </div>
+            <div class="card" onclick="abrirModal('Publicidade')">
+                <h3>Publicidade</h3>
+                <p>Anúncios e Redes Sociais</p>
+            </div>
+            <div class="card" onclick="abrirModal('Editorial')">
+                <h3>Editorial</h3>
+                <p>Livros e Revistas</p>
+            </div>
+            <div class="card" onclick="abrirModal('Interface')">
+                <h3>Interface</h3>
+                <p>UI/UX Design</p>
+            </div>
+            <div class="card" onclick="abrirModal('Embalagens')">
+                <h3>Embalagens</h3>
+                <p>Design de Produto</p>
+            </div>
+            <div class="card" onclick="abrirModal('Motion Graphics')">
+                <h3>Motion Graphics</h3>
+                <p>Animação e Vídeo</p>
+            </div>
+            <div class="card" onclick="abrirModal('Ambiental')">
+                <h3>Ambiental</h3>
+                <p>Sinalização e Espaços</p>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <button class="close-btn" onclick="fecharModal()">&times;</button>
+            <h2 id="modalTitle">Pedido</h2>
+            <p>Preencha para iniciar o contato.</p>
+            
+            <form id="orderForm" onsubmit="enviarPedido(event)">
+                <input type="hidden" id="serviceType">
+                
+                <div class="form-group">
+                    <label for="nome">Seu Nome</label>
+                    <input type="text" id="nome" placeholder="Digite seu nome" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="whatsapp">WhatsApp</label>
+                    <input type="tel" id="whatsapp" placeholder="(00) 00000-0000" required>
+                </div>
+
+                <button type="submit" class="btn-submit">Enviar via WhatsApp</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- LÓGICA DO BACKGROUND ANIMADO ---
+        const bgSlides = document.querySelectorAll('.bg-slide');
+        let bgAtual = 0;
+
+        // Função que troca a imagem a cada 2000 milissegundos (2 segundos)
+        setInterval(() => {
+            // Remove a classe 'active' da imagem atual, escondendo-a
+            bgSlides[bgAtual].classList.remove('active');
+            
+            // Vai para a próxima (se for a última, volta para a primeira)
+            bgAtual = (bgAtual + 1) % bgSlides.length;
+            
+            // Adiciona a classe 'active' na nova imagem, mostrando-a
+            bgSlides[bgAtual].classList.add('active');
+        }, 2000);
+
+        // --- LÓGICA DO MODAL E FORMULÁRIO ---
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const serviceTypeInput = document.getElementById('serviceType');
+
+        function abrirModal(servico) {
+            modalTitle.innerText = servico;
+            serviceTypeInput.value = servico;
+            modal.style.display = 'flex';
+        }
+
+        function fecharModal() {
+            modal.style.display = 'none';
+        }
+
+        function enviarPedido(event) {
+            event.preventDefault();
+            const nome = document.getElementById('nome').value;
+            const whatsapp = document.getElementById('whatsapp').value;
+            const servico = document.getElementById('serviceType').value;
+
+            // Formata a mensagem para enviar direto pro SEU WhatsApp
+            const meuNumero = "5500000000000"; // COLOQUE SEU NÚMERO AQUI
+            const texto = `Olá! Meu nome é ${nome}. Tenho interesse em um orçamento para: *${servico}*. Meu WhatsApp de contato é ${whatsapp}.`;
+            
+            const url = `https://wa.me/${meuNumero}?text=${encodeURIComponent(texto)}`;
+            window.open(url, '_blank');
+            fecharModal();
+            document.getElementById('orderForm').reset();
+        }
+
+        // Fecha o modal clicando fora dele
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                fecharModal();
+            }
+        }
+
+        // --- LÓGICA DO PWA (Service Worker, Android e iOS) ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('Service Worker registrado!', reg);
+                }).catch(err => {
+                    console.log('Falha no Service Worker', err);
+                });
+            });
+        }
+
+        let deferredPrompt;
+        const installBanner = document.getElementById('installBanner');
+        const installBtn = document.getElementById('installBtn');
+        const iosPrompt = document.getElementById('iosPrompt');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBanner.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBanner.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        }
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+        if (isIos() && !isInStandaloneMode()) {
+            iosPrompt.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
