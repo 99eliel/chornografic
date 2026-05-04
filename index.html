@@ -295,7 +295,7 @@
         .modal p {
             color: #fff;
             font-size: 0.95rem;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             text-shadow: 0 1px 3px rgba(0,0,0,0.9);
         }
 
@@ -355,6 +355,18 @@
         .btn-success:hover {
             background-color: #128C7E;
             color: white;
+        }
+
+        /* --- PREÇOS --- */
+        .preco-destaque {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--neon-blue);
+            margin-bottom: 20px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 10px;
+            text-align: center;
         }
 
         /* --- ESTILOS DO SLIDER DE MODELOS --- */
@@ -472,7 +484,6 @@
 
         .btn-danger {
             background-color: var(--danger-red);
-            margin-top: 20px;
         }
 
         .btn-danger:hover {
@@ -504,11 +515,18 @@
             height: 16px;
             fill: currentColor;
         }
+
+        /* Seção interna de edição de preços no painel */
+        .admin-precos-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+        }
     </style>
 </head>
 <body>
 
-    <!-- BACKGROUND ANIMADO (Oitava imagem removida) -->
+    <!-- BACKGROUND ANIMADO -->
     <div class="bg-slider-container">
         <div class="bg-overlay"></div>
         <img src="https://i.imgur.com/Hx4Y00g.jpg" class="bg-slide active" alt="bg">
@@ -589,7 +607,7 @@
         <button class="btn-admin-link" onclick="abrirLoginAdmin()">Área do Administrador</button>
     </footer>
 
-    <!-- MODAL: PORTFÓLIO CUSTOMIZADO (Oitava imagem removida) -->
+    <!-- MODAL: PORTFÓLIO CUSTOMIZADO -->
     <div class="modal-overlay" id="modalModelos">
         <div class="modal large" style="padding: 20px; width: 95%;">
             <button class="close-btn" onclick="fecharModal('modalModelos')">&times;</button>
@@ -624,6 +642,10 @@
         <div class="modal">
             <button class="close-btn" onclick="fecharModal('modal')">&times;</button>
             <h2 id="modalTitle">Pedido</h2>
+            
+            <!-- Mostra o valor médio aqui -->
+            <div id="precoDisplay" class="preco-destaque">Valor em média: Buscando...</div>
+            
             <p>Preencha os dados (as artes estão rolando no fundo!).</p>
             <form id="orderForm" onsubmit="enviarPedido(event)">
                 <input type="hidden" id="serviceType">
@@ -671,17 +693,32 @@
     <div class="modal-overlay" id="modalPainel">
         <div class="modal large">
             <button class="close-btn" onclick="fecharModal('modalPainel')">&times;</button>
+            
             <h2>Pedidos Recebidos</h2>
             <p>Lista de clientes puxada direto do Firebase.</p>
-            <div id="listaPedidos"></div>
-            <button class="btn-submit btn-danger" onclick="limparPedidos()">Limpar Histórico no Banco de Dados</button>
+            <div id="listaPedidos" style="margin-bottom: 20px;"></div>
+            
+            <button class="btn-submit btn-danger" style="width: auto; padding: 10px 20px;" onclick="limparPedidos()">Limpar Histórico de Pedidos</button>
+
+            <!-- SEÇÃO DE PREÇOS NO ADMIN -->
+            <div class="admin-precos-section">
+                <h2 style="color: var(--neon-blue); margin-bottom: 5px;">Configurar Preços Base</h2>
+                <p style="font-size: 0.9rem; margin-bottom: 15px;">Os valores digitados aqui aparecerão para os clientes na tela de pedido.</p>
+                
+                <div id="formPrecosAdmin">
+                    <!-- Gerado pelo JS -->
+                </div>
+                <button id="btnSalvarPrecos" class="btn-submit btn-success" style="width: auto; padding: 10px 20px; margin-top: 15px;" onclick="salvarPrecosAdmin()">Salvar Preços</button>
+            </div>
+
         </div>
     </div>
 
     <!-- SCRIPT FIREBASE E LÓGICA DO SITE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+        // Importamos as funções extras getDoc e setDoc para lidar com os preços
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAqUJYK3L0e77NYh_hE176CY3SV-jg3-Yc",
@@ -695,6 +732,26 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        // Variaveis e configuração das Categorias de Preço
+        const categoriasServicos = [
+            'Identidade Visual', 'Publicidade', 'Editorial', 
+            'Interface', 'Embalagens', 'Motion Graphics', 'Ambiental'
+        ];
+        let precosGlobais = {};
+
+        // Carrega os preços salvos assim que o site abre
+        async function carregarPrecosIniciais() {
+            try {
+                const docSnap = await getDoc(doc(db, "configuracoes", "precos"));
+                if (docSnap.exists()) {
+                    precosGlobais = docSnap.data();
+                }
+            } catch (e) {
+                console.log("Ainda não há preços configurados ou erro de rede.");
+            }
+        }
+        carregarPrecosIniciais();
 
         // Background slider
         const bgSlides = document.querySelectorAll('.bg-slide');
@@ -713,10 +770,16 @@
         window.abrirModal = function(servico) {
             document.getElementById('modalTitle').innerText = servico;
             document.getElementById('serviceType').value = servico;
+            
+            // Puxa o preço salvo. Se estiver vazio, mostra "A combinar"
+            let precoDefinido = precosGlobais[servico];
+            let textoPreco = precoDefinido ? `Valor em média: ${precoDefinido}` : "Valor: A combinar";
+            document.getElementById('precoDisplay').innerText = textoPreco;
+
             document.getElementById('modal').style.display = 'flex';
         }
 
-        // --- LÓGICA DO NOVO SLIDER DE PORTFÓLIO ---
+        // --- LÓGICA DO SLIDER DE PORTFÓLIO ---
         const modelos = document.querySelectorAll('.modelo-slide');
         const contadorText = document.getElementById('contadorModelos');
         let modeloAtual = 0;
@@ -727,20 +790,17 @@
 
         window.mudarModelo = function(direcao) {
             modelos[modeloAtual].classList.remove('active');
-            
             modeloAtual += direcao;
-            
             if (modeloAtual < 0) {
                 modeloAtual = modelos.length - 1;
             } else if (modeloAtual >= modelos.length) {
                 modeloAtual = 0;
             }
-            
             modelos[modeloAtual].classList.add('active');
             contadorText.innerText = (modeloAtual + 1) + " / " + modelos.length;
         }
 
-        // Firebase: Enviar Pedido
+        // --- FIREBASE: ENVIAR PEDIDO ---
         window.enviarPedido = async function(event) {
             event.preventDefault();
             const nome = document.getElementById('nome').value;
@@ -772,7 +832,7 @@
             }
         }
 
-        // Painel Administrativo
+        // --- PAINEL ADMINISTRATIVO E TABELA DE PREÇOS ---
         window.abrirLoginAdmin = function() {
             document.getElementById('senhaAdmin').value = '';
             document.getElementById('modalLogin').style.display = 'flex';
@@ -794,6 +854,7 @@
             document.getElementById('modalPainel').style.display = 'flex';
 
             try {
+                // 1. Carrega os Pedidos
                 const q = query(collection(db, "pedidos"), orderBy("timestamp", "desc"));
                 const querySnapshot = await getDocs(q);
                 let bancoPedidos = [];
@@ -823,8 +884,27 @@
                     htmlTabela += `</tbody></table></div>`;
                     divLista.innerHTML = htmlTabela;
                 }
+
+                // 2. Carrega a lista de Inputs de Preço
+                await carregarPrecosIniciais(); // Garante os dados mais novos
+                let formHtml = '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; text-align:left;">';
+                
+                categoriasServicos.forEach(cat => {
+                    let valAtual = precosGlobais[cat] || '';
+                    // Remove espaços pro ID do HTML não bugar
+                    let idLimpo = cat.replace(/\s/g, ''); 
+                    formHtml += `
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="color:var(--neon-blue);">${cat}</label>
+                            <input type="text" id="inputPreco_${idLimpo}" value="${valAtual}" placeholder="Ex: R$ 350,00 ou A combinar">
+                        </div>
+                    `;
+                });
+                formHtml += '</div>';
+                document.getElementById('formPrecosAdmin').innerHTML = formHtml;
+
             } catch (error) {
-                divLista.innerHTML = `<div class="admin-empty" style="color:var(--danger-red);">Erro ao buscar pedidos.</div>`;
+                divLista.innerHTML = `<div class="admin-empty" style="color:var(--danger-red);">Erro ao buscar dados.</div>`;
             }
         }
 
@@ -838,6 +918,33 @@
                     alert("Banco formatado.");
                     carregarPainelAdmin();
                 } catch (error) { alert("Falha ao apagar."); }
+            }
+        }
+
+        // --- FIREBASE: SALVAR PREÇOS ---
+        window.salvarPrecosAdmin = async function() {
+            const btn = document.getElementById('btnSalvarPrecos');
+            btn.innerText = "Salvando...";
+            btn.disabled = true;
+
+            let novosPrecos = {};
+            categoriasServicos.forEach(cat => {
+                let idLimpo = cat.replace(/\s/g, '');
+                novosPrecos[cat] = document.getElementById(`inputPreco_${idLimpo}`).value;
+            });
+
+            try {
+                // Salva no banco de dados, no documento "precos"
+                await setDoc(doc(db, "configuracoes", "precos"), novosPrecos);
+                // Atualiza na memória pra funcionar na mesma hora no Modal de cliente
+                precosGlobais = novosPrecos;
+                alert("Preços atualizados com sucesso!");
+            } catch(e) {
+                alert("Erro ao salvar preços. Cheque o Firebase.");
+                console.error(e);
+            } finally {
+                btn.innerText = "Salvar Preços";
+                btn.disabled = false;
             }
         }
 
@@ -859,7 +966,6 @@
         mainInstallBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     installContainer.style.display = 'none';
