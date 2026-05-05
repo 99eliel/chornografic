@@ -516,7 +516,6 @@
             fill: currentColor;
         }
 
-        /* Seção interna de edição de preços no painel */
         .admin-precos-section {
             margin-top: 30px;
             padding-top: 20px;
@@ -552,7 +551,6 @@
             <p>Selecione o tipo de projeto</p>
         </header>
 
-        <!-- SEÇÃO DO BOTÃO DE INSTALAÇÃO -->
         <div class="install-section" id="installContainer">
             <button id="mainInstallBtn" class="btn-install">
                 <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
@@ -560,7 +558,6 @@
             </button>
         </div>
 
-        <!-- BOTÃO DE MODELOS PRONTOS -->
         <div style="text-align: center;">
             <button class="btn-modelos" onclick="abrirModalModelos()">
                 <svg viewBox="0 0 24 24">
@@ -570,7 +567,6 @@
             </button>
         </div>
 
-        <!-- GRID DE SERVIÇOS -->
         <main class="container">
             <div class="card" onclick="abrirModal('Identidade Visual')">
                 <h3>Identidade Visual</h3>
@@ -607,7 +603,7 @@
         <button class="btn-admin-link" onclick="abrirLoginAdmin()">Área do Administrador</button>
     </footer>
 
-    <!-- MODAL: PORTFÓLIO CUSTOMIZADO -->
+    <!-- MODAL: PORTFÓLIO -->
     <div class="modal-overlay" id="modalModelos">
         <div class="modal large" style="padding: 20px; width: 95%;">
             <button class="close-btn" onclick="fecharModal('modalModelos')">&times;</button>
@@ -642,11 +638,8 @@
         <div class="modal">
             <button class="close-btn" onclick="fecharModal('modal')">&times;</button>
             <h2 id="modalTitle">Pedido</h2>
-            
-            <!-- Mostra o valor médio aqui -->
             <div id="precoDisplay" class="preco-destaque">Valor em média: Buscando...</div>
-            
-            <p>Preencha os dados (as artes estão rolando no fundo!).</p>
+            <p>Preencha os dados para iniciarmos seu projeto.</p>
             <form id="orderForm" onsubmit="enviarPedido(event)">
                 <input type="hidden" id="serviceType">
                 <div class="form-group">
@@ -666,10 +659,10 @@
     <div class="modal-overlay" id="modalSucesso">
         <div class="modal" style="text-align: center;">
             <button class="close-btn" onclick="fecharModal('modalSucesso')">&times;</button>
-            <h2 style="color: var(--success-green); margin-bottom: 15px; text-shadow: none;">Pedido Concluído! 🎉</h2>
-            <p>Recebemos as informações do seu projeto com sucesso.</p>
-            <p>Nossa equipe entrará em contato com você via WhatsApp em breve para conversar sobre o orçamento.</p>
-            <button class="btn-submit btn-success" onclick="fecharModal('modalSucesso')">OK, Entendi!</button>
+            <h2 style="color: var(--success-green); margin-bottom: 15px;">Pedido Concluído! 🎉</h2>
+            <p>Recebemos as informações com sucesso.</p>
+            <p>Entraremos em contato via WhatsApp em breve.</p>
+            <button class="btn-submit btn-success" onclick="fecharModal('modalSucesso')">OK!</button>
         </div>
     </div>
 
@@ -678,7 +671,6 @@
         <div class="modal">
             <button class="close-btn" onclick="fecharModal('modalLogin')">&times;</button>
             <h2>Acesso Restrito</h2>
-            <p>Digite a senha para ver os pedidos.</p>
             <form onsubmit="verificarSenha(event)">
                 <div class="form-group">
                     <label for="senhaAdmin">Senha</label>
@@ -693,63 +685,50 @@
     <div class="modal-overlay" id="modalPainel">
         <div class="modal large">
             <button class="close-btn" onclick="fecharModal('modalPainel')">&times;</button>
-            
             <h2>Pedidos Recebidos</h2>
-            <p>Lista de clientes puxada direto do Firebase.</p>
             <div id="listaPedidos" style="margin-bottom: 20px;"></div>
-            
-            <button class="btn-submit btn-danger" style="width: auto; padding: 10px 20px;" onclick="limparPedidos()">Limpar Histórico de Pedidos</button>
+            <button class="btn-submit btn-danger" style="width: auto; padding: 10px 20px;" onclick="limparPedidos()">Limpar Pedidos</button>
 
-            <!-- SEÇÃO DE PREÇOS NO ADMIN -->
             <div class="admin-precos-section">
-                <h2 style="color: var(--neon-blue); margin-bottom: 5px;">Configurar Preços Base</h2>
-                <p style="font-size: 0.9rem; margin-bottom: 15px;">Os valores digitados aqui aparecerão para os clientes na tela de pedido.</p>
-                
-                <div id="formPrecosAdmin">
-                    <!-- Gerado pelo JS -->
-                </div>
+                <h2>Configurar Preços Base</h2>
+                <div id="formPrecosAdmin"></div>
                 <button id="btnSalvarPrecos" class="btn-submit btn-success" style="width: auto; padding: 10px 20px; margin-top: 15px;" onclick="salvarPrecosAdmin()">Salvar Preços</button>
             </div>
-
         </div>
     </div>
 
-    <!-- SCRIPT FIREBASE E LÓGICA DO SITE -->
     <script type="module">
+        // Importações atualizadas do Firebase v10
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        // Importamos as funções extras getDoc e setDoc para lidar com os preços
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
 
+        // SUA NOVA CONFIGURAÇÃO
         const firebaseConfig = {
-            apiKey: "AIzaSyAqUJYK3L0e77NYh_hE176CY3SV-jg3-Yc",
-            authDomain: "chornografic.firebaseapp.com",
-            projectId: "chornografic",
-            storageBucket: "chornografic.firebasestorage.app",
-            messagingSenderId: "685211286639",
-            appId: "1:685211286639:web:9444cca8dfe2e46222e19a",
-            measurementId: "G-RXNCY69R7Y"
+            apiKey: "AIzaSyDm87FZoxotFJnw5HzaLWcfYGqX5WsvMRc",
+            authDomain: "chornografic-38313.firebaseapp.com",
+            projectId: "chornografic-38313",
+            storageBucket: "chornografic-38313.firebasestorage.app",
+            messagingSenderId: "955682737767",
+            appId: "1:955682737767:web:0b4f5eafe678606f4fcec2",
+            measurementId: "G-GJMJHSEELK"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const analytics = getAnalytics(app);
 
-        // Variaveis e configuração das Categorias de Preço
-        const categoriasServicos = [
-            'Identidade Visual', 'Publicidade', 'Editorial', 
-            'Interface', 'Embalagens', 'Motion Graphics', 'Ambiental'
-        ];
+        // --- LÓGICA DO SITE ---
+        const categoriasServicos = ['Identidade Visual', 'Publicidade', 'Editorial', 'Interface', 'Embalagens', 'Motion Graphics', 'Ambiental'];
         let precosGlobais = {};
 
-        // Carrega os preços salvos assim que o site abre
         async function carregarPrecosIniciais() {
             try {
                 const docSnap = await getDoc(doc(db, "configuracoes", "precos"));
                 if (docSnap.exists()) {
                     precosGlobais = docSnap.data();
                 }
-            } catch (e) {
-                console.log("Ainda não há preços configurados ou erro de rede.");
-            }
+            } catch (e) { console.log("Erro ao carregar preços."); }
         }
         carregarPrecosIniciais();
 
@@ -760,224 +739,107 @@
             bgSlides[bgAtual].classList.remove('active');
             bgAtual = (bgAtual + 1) % bgSlides.length;
             bgSlides[bgAtual].classList.add('active');
-        }, 2000);
+        }, 3000);
 
-        // Funções Modais Básicas
-        window.fecharModal = function(idModal) {
-            document.getElementById(idModal).style.display = 'none';
-        }
+        window.fecharModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
 
         window.abrirModal = function(servico) {
             document.getElementById('modalTitle').innerText = servico;
             document.getElementById('serviceType').value = servico;
-            
-            // Puxa o preço salvo. Se estiver vazio, mostra "A combinar"
             let precoDefinido = precosGlobais[servico];
-            let textoPreco = precoDefinido ? `Valor em média: ${precoDefinido}` : "Valor: A combinar";
-            document.getElementById('precoDisplay').innerText = textoPreco;
-
+            document.getElementById('precoDisplay').innerText = precoDefinido ? `Valor em média: ${precoDefinido}` : "Valor: A combinar";
             document.getElementById('modal').style.display = 'flex';
         }
 
-        // --- LÓGICA DO SLIDER DE PORTFÓLIO ---
+        // --- PORTFÓLIO ---
         const modelos = document.querySelectorAll('.modelo-slide');
         const contadorText = document.getElementById('contadorModelos');
         let modeloAtual = 0;
 
-        window.abrirModalModelos = function() {
-            document.getElementById('modalModelos').style.display = 'flex';
-        }
-
+        window.abrirModalModelos = function() { document.getElementById('modalModelos').style.display = 'flex'; }
         window.mudarModelo = function(direcao) {
             modelos[modeloAtual].classList.remove('active');
-            modeloAtual += direcao;
-            if (modeloAtual < 0) {
-                modeloAtual = modelos.length - 1;
-            } else if (modeloAtual >= modelos.length) {
-                modeloAtual = 0;
-            }
+            modeloAtual = (modeloAtual + direcao + modelos.length) % modelos.length;
             modelos[modeloAtual].classList.add('active');
             contadorText.innerText = (modeloAtual + 1) + " / " + modelos.length;
         }
 
-        // --- FIREBASE: ENVIAR PEDIDO ---
+        // --- ENVIAR PEDIDO ---
         window.enviarPedido = async function(event) {
             event.preventDefault();
-            const nome = document.getElementById('nome').value;
-            const whatsapp = document.getElementById('whatsapp').value;
-            const servico = document.getElementById('serviceType').value;
             const btn = document.querySelector('#orderForm .btn-submit');
-            
-            btn.innerText = "Salvando pedido...";
+            btn.innerText = "Salvando...";
             btn.disabled = true;
 
             try {
                 await addDoc(collection(db, "pedidos"), {
-                    nome: nome,
-                    whatsapp: whatsapp,
-                    servico: servico,
-                    data: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}),
+                    nome: document.getElementById('nome').value,
+                    whatsapp: document.getElementById('whatsapp').value,
+                    servico: document.getElementById('serviceType').value,
+                    data: new Date().toLocaleString('pt-BR'),
                     timestamp: Date.now()
                 });
-                
-                window.fecharModal('modal');
+                fecharModal('modal');
                 document.getElementById('orderForm').reset();
                 document.getElementById('modalSucesso').style.display = 'flex';
-
-            } catch (error) {
-                alert("Erro de conexão. Verifique as regras do Firebase. " + error.message);
-            } finally {
-                btn.innerText = "Enviar Pedido";
-                btn.disabled = false;
-            }
+            } catch (error) { alert("Erro ao enviar pedido."); }
+            finally { btn.innerText = "Enviar Pedido"; btn.disabled = false; }
         }
 
-        // --- PAINEL ADMINISTRATIVO E TABELA DE PREÇOS ---
-        window.abrirLoginAdmin = function() {
-            document.getElementById('senhaAdmin').value = '';
-            document.getElementById('modalLogin').style.display = 'flex';
-        }
-
+        // --- ADMIN ---
+        window.abrirLoginAdmin = function() { document.getElementById('modalLogin').style.display = 'flex'; }
         window.verificarSenha = function(event) {
             event.preventDefault();
             if (document.getElementById('senhaAdmin').value === 'gustavo2026') {
-                window.fecharModal('modalLogin');
+                fecharModal('modalLogin');
                 carregarPainelAdmin();
-            } else {
-                alert('Senha incorreta!');
-            }
+            } else { alert('Senha incorreta!'); }
         }
 
         async function carregarPainelAdmin() {
             const divLista = document.getElementById('listaPedidos');
-            divLista.innerHTML = '<div class="admin-empty">Buscando na nuvem...</div>';
+            divLista.innerHTML = 'Buscando...';
             document.getElementById('modalPainel').style.display = 'flex';
 
             try {
-                // 1. Carrega os Pedidos
                 const q = query(collection(db, "pedidos"), orderBy("timestamp", "desc"));
                 const querySnapshot = await getDocs(q);
-                let bancoPedidos = [];
-                querySnapshot.forEach((doc) => { bancoPedidos.push({ id: doc.id, ...doc.data() }); });
-
-                if (bancoPedidos.length === 0) {
-                    divLista.innerHTML = '<div class="admin-empty">Nenhum pedido registrado no banco.</div>';
-                } else {
-                    let htmlTabela = `<div style="overflow-x:auto;"><table class="admin-table"><thead><tr><th>Data</th><th>Cliente</th><th>Contato</th><th>Serviço</th></tr></thead><tbody>`;
-                    bancoPedidos.forEach(pedido => {
-                        let numLimpo = pedido.whatsapp.replace(/\D/g, '');
-                        if (!numLimpo.startsWith('55') && numLimpo.length >= 10) numLimpo = '55' + numLimpo;
-                        let msgAdmin = encodeURIComponent(`Olá ${pedido.nome}, recebi seu pedido de orçamento para ${pedido.servico}. Como posso ajudar?`);
-
-                        htmlTabela += `<tr>
-                            <td>${pedido.data}</td>
-                            <td><strong>${pedido.nome}</strong></td>
-                            <td>${pedido.whatsapp}<br>
-                                <a href="https://wa.me/${numLimpo}?text=${msgAdmin}" target="_blank" class="btn-whats">
-                                    <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                                    Chamar
-                                </a>
-                            </td>
-                            <td><span style="background:var(--primary-blue); padding:3px 8px; border-radius:12px; font-size:0.8rem;">${pedido.servico}</span></td>
-                        </tr>`;
-                    });
-                    htmlTabela += `</tbody></table></div>`;
-                    divLista.innerHTML = htmlTabela;
-                }
-
-                // 2. Carrega a lista de Inputs de Preço
-                await carregarPrecosIniciais(); // Garante os dados mais novos
-                let formHtml = '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; text-align:left;">';
-                
-                categoriasServicos.forEach(cat => {
-                    let valAtual = precosGlobais[cat] || '';
-                    // Remove espaços pro ID do HTML não bugar
-                    let idLimpo = cat.replace(/\s/g, ''); 
-                    formHtml += `
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label style="color:var(--neon-blue);">${cat}</label>
-                            <input type="text" id="inputPreco_${idLimpo}" value="${valAtual}" placeholder="Ex: R$ 350,00 ou A combinar">
-                        </div>
-                    `;
+                let html = '<table class="admin-table"><tr><th>Data</th><th>Cliente</th><th>Serviço</th></tr>';
+                querySnapshot.forEach((doc) => {
+                    const p = doc.data();
+                    html += `<tr><td>${p.data}</td><td>${p.nome}<br>${p.whatsapp}</td><td>${p.servico}</td></tr>`;
                 });
-                formHtml += '</div>';
-                document.getElementById('formPrecosAdmin').innerHTML = formHtml;
+                divLista.innerHTML = html + '</table>';
 
-            } catch (error) {
-                divLista.innerHTML = `<div class="admin-empty" style="color:var(--danger-red);">Erro ao buscar dados.</div>`;
-            }
+                // Form Preços
+                let formHtml = '';
+                categoriasServicos.forEach(cat => {
+                    formHtml += `<div class="form-group"><label>${cat}</label>
+                    <input type="text" id="input_${cat.replace(/\s/g, '')}" value="${precosGlobais[cat] || ''}"></div>`;
+                });
+                document.getElementById('formPrecosAdmin').innerHTML = formHtml;
+            } catch (e) { divLista.innerHTML = "Erro ao carregar."; }
+        }
+
+        window.salvarPrecosAdmin = async function() {
+            let novos = {};
+            categoriasServicos.forEach(cat => {
+                novos[cat] = document.getElementById(`input_${cat.replace(/\s/g, '')}`).value;
+            });
+            try {
+                await setDoc(doc(db, "configuracoes", "precos"), novos);
+                precosGlobais = novos;
+                alert("Salvo!");
+            } catch (e) { alert("Erro ao salvar."); }
         }
 
         window.limparPedidos = async function() {
-            if(confirm('Isso vai excluir os dados permanentemente. Continuar?')) {
-                try {
-                    const querySnapshot = await getDocs(collection(db, "pedidos"));
-                    const promessasDeletar = [];
-                    querySnapshot.forEach((docSnap) => { promessasDeletar.push(deleteDoc(doc(db, "pedidos", docSnap.id))); });
-                    await Promise.all(promessasDeletar);
-                    alert("Banco formatado.");
-                    carregarPainelAdmin();
-                } catch (error) { alert("Falha ao apagar."); }
+            if(confirm('Apagar tudo?')) {
+                const snap = await getDocs(collection(db, "pedidos"));
+                snap.forEach(async (d) => await deleteDoc(doc(db, "pedidos", d.id)));
+                carregarPainelAdmin();
             }
         }
-
-        // --- FIREBASE: SALVAR PREÇOS ---
-        window.salvarPrecosAdmin = async function() {
-            const btn = document.getElementById('btnSalvarPrecos');
-            btn.innerText = "Salvando...";
-            btn.disabled = true;
-
-            let novosPrecos = {};
-            categoriasServicos.forEach(cat => {
-                let idLimpo = cat.replace(/\s/g, '');
-                novosPrecos[cat] = document.getElementById(`inputPreco_${idLimpo}`).value;
-            });
-
-            try {
-                // Salva no banco de dados, no documento "precos"
-                await setDoc(doc(db, "configuracoes", "precos"), novosPrecos);
-                // Atualiza na memória pra funcionar na mesma hora no Modal de cliente
-                precosGlobais = novosPrecos;
-                alert("Preços atualizados com sucesso!");
-            } catch(e) {
-                alert("Erro ao salvar preços. Cheque o Firebase.");
-                console.error(e);
-            } finally {
-                btn.innerText = "Salvar Preços";
-                btn.disabled = false;
-            }
-        }
-
-        // --- LÓGICA DO PWA ---
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW falhou')); });
-        }
-
-        let deferredPrompt;
-        const installContainer = document.getElementById('installContainer');
-        const mainInstallBtn = document.getElementById('mainInstallBtn');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installContainer.style.display = 'block';
-        });
-
-        mainInstallBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installContainer.style.display = 'none';
-                }
-                deferredPrompt = null;
-            }
-        });
-
-        window.addEventListener('appinstalled', () => {
-            installContainer.style.display = 'none';
-            deferredPrompt = null;
-        });
     </script>
 </body>
 </html>
