@@ -3,843 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0a0a0a">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <title>ChronoGraphic | Pedidos de Design</title>
+    <title>Catálogo de Árvores - Meio Ambiente</title>
     
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2E7D32">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
     <style>
         :root {
-            --primary-blue: #007bff;
-            --neon-blue: #00e5ff;
-            --text-light: #f0f6fc;
-            --text-muted: #8b949e;
-            --danger-red: #ff4444;
-            --success-green: #25D366;
+            --primary: #2E7D32;
+            --secondary: #4CAF50;
+            --danger: #d32f2f;
+            --bg: #f4f7f6;
+            --text: #333;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            color: var(--text-light);
-            min-height: 100vh;
-            padding-bottom: 20px;
-            overflow-x: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             display: flex;
             flex-direction: column;
-        }
-
-        /* --- BACKGROUND SLIDER ANIMADO --- */
-        .bg-slider-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
             height: 100vh;
-            z-index: -1;
-            background-color: #000;
-        }
-
-        .bg-slide {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            opacity: 0;
-            transition: opacity 1s ease-in-out;
-        }
-
-        .bg-slide.active {
-            opacity: 1;
-        }
-
-        .bg-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 10, 0.35);
-            z-index: 1;
-        }
-
-        /* --- CONTEÚDO PRINCIPAL --- */
-        .main-content {
-            position: relative;
-            z-index: 2;
-            flex-grow: 1;
         }
 
         header {
-            background-color: rgba(15, 15, 15, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 2px solid var(--primary-blue);
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        header h1 {
-            color: var(--neon-blue);
-            font-size: 1.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        header p {
-            color: #d1d5da;
-            font-size: 0.9rem;
-            margin-top: 5px;
-        }
-
-        /* --- BOTÃO DE INSTALAÇÃO NATIVO --- */
-        .install-section {
-            text-align: center;
-            margin: 20px auto 10px auto;
-        }
-
-        #installContainer {
-            display: none; 
-        }
-
-        .btn-install {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background-color: var(--neon-blue);
-            color: #000;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
-        }
-
-        .btn-install:hover {
-            background-color: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.5);
-        }
-
-        .btn-install svg {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-        }
-
-        /* --- BOTÃO MODELOS PRONTOS --- */
-        .btn-modelos {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background-color: rgba(0, 0, 0, 0.6);
-            color: var(--neon-blue);
-            border: 2px solid var(--neon-blue);
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            margin: 10px auto 20px auto;
-        }
-
-        .btn-modelos:hover {
-            background-color: var(--neon-blue);
-            color: #000;
-            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
-        }
-
-        .btn-modelos svg {
-            width: 20px;
-            height: 20px;
-            fill: currentColor;
-        }
-
-        /* --- GRID DE CATEGORIAS --- */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto 30px auto;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background-color: rgba(20, 20, 20, 0.4);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 25px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background-color: var(--primary-blue);
-            transition: width 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 229, 255, 0.3);
-            border-color: var(--neon-blue);
-            background-color: rgba(20, 20, 20, 0.7);
-        }
-
-        .card h3 {
-            color: var(--neon-blue);
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-            position: relative;
-            z-index: 2;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .card p {
-            color: #fff;
-            font-size: 0.9rem;
-            position: relative;
-            z-index: 2;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-        }
-
-        /* --- MODAIS GERAIS --- */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6); 
-            backdrop-filter: blur(3px);
-            z-index: 200;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal {
-            background-color: rgba(10, 10, 10, 0.3); 
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            width: 90%;
-            max-width: 400px;
-            padding: 30px;
-            border-radius: 12px;
-            border: 1px solid rgba(0, 229, 255, 0.4);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9);
-            position: relative;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal.large {
-            max-width: 900px;
-            background-color: rgba(15, 15, 15, 0.95); 
-            backdrop-filter: none;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 1.5rem;
-            color: #fff;
-            cursor: pointer;
-            background: none;
-            border: none;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            z-index: 100;
-        }
-
-        .close-btn:hover {
-            color: var(--danger-red);
-        }
-
-        .modal h2 {
-            color: var(--neon-blue);
-            margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.9);
-        }
-
-        .modal p {
-            color: #fff;
-            font-size: 0.95rem;
-            margin-bottom: 15px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.9);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            background-color: rgba(0, 0, 0, 0.6); 
-            color: #fff;
-            outline: none;
-            font-size: 1rem;
-        }
-
-        .form-group input:focus {
-            border-color: var(--neon-blue);
-            box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary-blue);
+            background-color: var(--primary);
             color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
-        }
-
-        .btn-submit:hover {
-            background-color: var(--neon-blue);
-            color: #000;
-        }
-
-        .btn-success {
-            background-color: var(--success-green);
-        }
-
-        .btn-success:hover {
-            background-color: #128C7E;
-            color: white;
-        }
-
-        /* --- PREÇOS --- */
-        .preco-destaque {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: var(--neon-blue);
-            margin-bottom: 20px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.9);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 10px;
+            padding: 1rem;
             text-align: center;
-        }
-
-        /* --- ESTILOS DO SLIDER DE MODELOS --- */
-        .slider-modelos {
-            position: relative;
-            width: 100%;
-            height: 60vh;
-            min-height: 300px;
-            background: #050505;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #30363d;
-        }
-
-        .modelo-slide {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            opacity: 0;
-            transition: opacity 0.4s ease-in-out;
-        }
-
-        .modelo-slide.active {
-            opacity: 1;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             z-index: 10;
         }
 
-        .btn-nav-modelo {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: var(--text-light);
-            border: none;
-            cursor: pointer;
-            padding: 12px 18px;
-            font-size: 1.5rem;
-            border-radius: 50%;
-            z-index: 20;
-            transition: background 0.3s, color 0.3s;
+        .tabs {
+            display: flex;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .btn-nav-modelo:hover {
-            background-color: var(--neon-blue);
-            color: #000;
-        }
-
-        .btn-nav-modelo.prev {
-            left: 10px;
-        }
-
-        .btn-nav-modelo.next {
-            right: 10px;
-        }
-
-        .contador-modelos {
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
             text-align: center;
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: #ccc;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-
-        /* --- PAINEL ADMIN E RODAPÉ --- */
-        footer {
-            text-align: center;
-            padding: 20px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .btn-admin-link {
             background: none;
             border: none;
-            color: rgba(255,255,255,0.6);
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-decoration: underline;
-            transition: color 0.3s;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        }
-
-        .btn-admin-link:hover {
-            color: var(--neon-blue);
-        }
-
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 0.95rem;
-        }
-
-        .admin-table th, .admin-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #30363d;
-            vertical-align: middle;
-        }
-
-        .admin-table th {
-            color: var(--primary-blue);
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-
-        .admin-empty {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-muted);
-        }
-
-        .btn-danger {
-            background-color: var(--danger-red);
-        }
-
-        .btn-danger:hover {
-            background-color: #cc0000;
-        }
-
-        .btn-whats {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            background-color: #25D366;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            text-decoration: none;
+            border-bottom: 3px solid transparent;
             font-weight: bold;
-            font-size: 0.85rem;
-            transition: background 0.3s;
-            margin-top: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            color: #666;
         }
 
-        .btn-whats:hover {
-            background-color: #128C7E;
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
         }
 
-        .btn-whats svg {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
+        .tab-content {
+            display: none;
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
         }
 
-        .admin-precos-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #30363d;
+        .tab-content.active {
+            display: block;
         }
+
+        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
+        label { font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="file"] { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        
+        .btn {
+            background-color: var(--secondary); color: white; border: none; padding: 14px;
+            font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:hover { background-color: var(--primary); }
+        .btn-location { background-color: #0277bd; }
+        .btn-danger { background-color: var(--danger); padding: 8px; font-size: 14px; width: auto; }
+
+        #location-status { font-size: 14px; color: var(--danger); font-weight: bold; display: block; margin-bottom: 15px; text-align: center; }
+        .success-text { color: var(--primary) !important; }
+
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        .tree-card {
+            background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
+        }
+        .tree-card img { width: 70px; height: 70px; border-radius: 6px; object-fit: cover; margin-right: 15px; }
+        .tree-info { flex: 1; }
+        .tree-info h3 { margin-bottom: 5px; font-size: 18px; }
+        
+        #loader { display: none; text-align: center; padding: 20px; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
 
-    <!-- BACKGROUND ANIMADO -->
-    <div class="bg-slider-container">
-        <div class="bg-overlay"></div>
-        <img src="https://i.imgur.com/Hx4Y00g.jpg" class="bg-slide active" alt="bg">
-        <img src="https://i.imgur.com/woCRGeM.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/i6atljr.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/vad9VgM.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/3kTiUD2.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/AzcXVhY.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/2Mlp1tK.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/rTFx5vJ.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/yAICVGv.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/rytu7Xs.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/hIDkrBO.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/QEkFjrH.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/HwbBdB6.jpg" class="bg-slide" alt="bg">
-        <img src="https://i.imgur.com/UIGervF.jpg" class="bg-slide" alt="bg">
+    <header>
+        <h2>Secretaria de Meio Ambiente</h2>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('tab-add', this)">Catalogar</button>
+        <button class="tab-btn" onclick="openTab('tab-map', this)">Ver Mapa</button>
+        <button class="tab-btn" onclick="openTab('tab-manage', this)">Gerenciar</button>
     </div>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <div class="main-content">
-        <header>
-            <h1>ChronoGraphic</h1>
-            <p>Selecione o tipo de projeto</p>
-        </header>
+    <div id="tab-add" class="tab-content active">
+        <form id="treeForm">
+            <div class="form-group">
+                <label for="treeName">Espécie da Árvore:</label>
+                <input type="text" id="treeName" placeholder="Ex: Ipê Roxo" required>
+            </div>
 
-        <div class="install-section" id="installContainer">
-            <button id="mainInstallBtn" class="btn-install">
-                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                Instalar Aplicativo
-            </button>
-        </div>
+            <div class="form-group">
+                <label for="treePhoto">Tirar Foto:</label>
+                <input type="file" id="treePhoto" accept="image/*" capture="environment" required>
+            </div>
 
-        <div style="text-align: center;">
-            <button class="btn-modelos" onclick="abrirModalModelos()">
-                <svg viewBox="0 0 24 24">
-                    <path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>
-                </svg>
-                Veja meus modelos prontos
-            </button>
-        </div>
-
-        <main class="container">
-            <div class="card" onclick="abrirModal('Identidade Visual')">
-                <h3>Identidade Visual</h3>
-                <p>Logos e Branding</p>
-            </div>
-            <div class="card" onclick="abrirModal('Publicidade')">
-                <h3>Publicidade</h3>
-                <p>Anúncios e Redes Sociais</p>
-            </div>
-            <div class="card" onclick="abrirModal('Editorial')">
-                <h3>Editorial</h3>
-                <p>Livros e Revistas</p>
-            </div>
-            <div class="card" onclick="abrirModal('Interface')">
-                <h3>Interface</h3>
-                <p>UI/UX Design</p>
-            </div>
-            <div class="card" onclick="abrirModal('Embalagens')">
-                <h3>Embalagens</h3>
-                <p>Design de Produto</p>
-            </div>
-            <div class="card" onclick="abrirModal('Motion Graphics')">
-                <h3>Motion Graphics</h3>
-                <p>Animação e Vídeo</p>
-            </div>
-            <div class="card" onclick="abrirModal('Ambiental')">
-                <h3>Ambiental</h3>
-                <p>Sinalização e Espaços</p>
-            </div>
-        </main>
-    </div>
-
-    <footer>
-        <button class="btn-admin-link" onclick="abrirLoginAdmin()">Área do Administrador</button>
-    </footer>
-
-    <!-- MODAL: PORTFÓLIO -->
-    <div class="modal-overlay" id="modalModelos">
-        <div class="modal large" style="padding: 20px; width: 95%;">
-            <button class="close-btn" onclick="fecharModal('modalModelos')">&times;</button>
-            <h2 style="text-align: center; margin-bottom: 15px; color: var(--neon-blue);">Meus Projetos</h2>
+            <button type="button" class="btn btn-location" id="getLocationBtn">📍 Obter Localização GPS</button>
+            <span id="location-status">GPS não capturado</span>
             
-            <div class="slider-modelos">
-                <img src="https://i.imgur.com/Hx4Y00g.jpg" class="modelo-slide active" alt="Arte 1">
-                <img src="https://i.imgur.com/woCRGeM.jpg" class="modelo-slide" alt="Arte 2">
-                <img src="https://i.imgur.com/i6atljr.jpg" class="modelo-slide" alt="Arte 3">
-                <img src="https://i.imgur.com/vad9VgM.jpg" class="modelo-slide" alt="Arte 4">
-                <img src="https://i.imgur.com/3kTiUD2.jpg" class="modelo-slide" alt="Arte 5">
-                <img src="https://i.imgur.com/AzcXVhY.jpg" class="modelo-slide" alt="Arte 6">
-                <img src="https://i.imgur.com/2Mlp1tK.jpg" class="modelo-slide" alt="Arte 7">
-                <img src="https://i.imgur.com/rTFx5vJ.jpg" class="modelo-slide" alt="Arte 8">
-                <img src="https://i.imgur.com/yAICVGv.jpg" class="modelo-slide" alt="Arte 9">
-                <img src="https://i.imgur.com/rytu7Xs.jpg" class="modelo-slide" alt="Arte 10">
-                <img src="https://i.imgur.com/hIDkrBO.jpg" class="modelo-slide" alt="Arte 11">
-                <img src="https://i.imgur.com/QEkFjrH.jpg" class="modelo-slide" alt="Arte 12">
-                <img src="https://i.imgur.com/HwbBdB6.jpg" class="modelo-slide" alt="Arte 13">
-                <img src="https://i.imgur.com/UIGervF.jpg" class="modelo-slide" alt="Arte 14">
-                
-                <button class="btn-nav-modelo prev" onclick="mudarModelo(-1)">&#10094;</button>
-                <button class="btn-nav-modelo next" onclick="mudarModelo(1)">&#10095;</button>
-            </div>
+            <input type="hidden" id="latitude">
+            <input type="hidden" id="longitude">
+
+            <button type="submit" class="btn" id="submitBtn">Salvar no Sistema</button>
+        </form>
+        <div id="loader">Enviando dados para o Firebase...</div>
+    </div>
+
+    <div id="tab-map" class="tab-content" style="padding: 0;">
+        <div id="map"></div>
+    </div>
+
+    <div id="tab-manage" class="tab-content">
+        <div id="treeList">
+            <p style="text-align:center;">Buscando registros...</p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    
+    <script>
+        function openTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             
-            <div class="contador-modelos" id="contadorModelos">1 / 14</div>
-        </div>
-    </div>
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
 
-    <!-- Modal de Pedido -->
-    <div class="modal-overlay" id="modal">
-        <div class="modal">
-            <button class="close-btn" onclick="fecharModal('modal')">&times;</button>
-            <h2 id="modalTitle">Pedido</h2>
-            <div id="precoDisplay" class="preco-destaque">Valor em média: Buscando...</div>
-            <p>Preencha os dados para iniciarmos seu projeto.</p>
-            <form id="orderForm" onsubmit="enviarPedido(event)">
-                <input type="hidden" id="serviceType">
-                <div class="form-group">
-                    <label for="nome">Seu Nome</label>
-                    <input type="text" id="nome" placeholder="Digite seu nome" required>
-                </div>
-                <div class="form-group">
-                    <label for="whatsapp">WhatsApp</label>
-                    <input type="tel" id="whatsapp" placeholder="(11) 90000-0000" required>
-                </div>
-                <button type="submit" class="btn-submit">Enviar Pedido</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal de Sucesso -->
-    <div class="modal-overlay" id="modalSucesso">
-        <div class="modal" style="text-align: center;">
-            <button class="close-btn" onclick="fecharModal('modalSucesso')">&times;</button>
-            <h2 style="color: var(--success-green); margin-bottom: 15px;">Pedido Concluído! 🎉</h2>
-            <p>Recebemos as informações com sucesso.</p>
-            <p>Entraremos em contato via WhatsApp em breve.</p>
-            <button class="btn-submit btn-success" onclick="fecharModal('modalSucesso')">OK!</button>
-        </div>
-    </div>
-
-    <!-- Modal de Login -->
-    <div class="modal-overlay" id="modalLogin">
-        <div class="modal">
-            <button class="close-btn" onclick="fecharModal('modalLogin')">&times;</button>
-            <h2>Acesso Restrito</h2>
-            <form onsubmit="verificarSenha(event)">
-                <div class="form-group">
-                    <label for="senhaAdmin">Senha</label>
-                    <input type="password" id="senhaAdmin" placeholder="Digite a senha" required>
-                </div>
-                <button type="submit" class="btn-submit">Entrar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Painel Admin -->
-    <div class="modal-overlay" id="modalPainel">
-        <div class="modal large">
-            <button class="close-btn" onclick="fecharModal('modalPainel')">&times;</button>
-            <h2>Pedidos Recebidos</h2>
-            <div id="listaPedidos" style="margin-bottom: 20px;"></div>
-            <button class="btn-submit btn-danger" style="width: auto; padding: 10px 20px;" onclick="limparPedidos()">Limpar Pedidos</button>
-
-            <div class="admin-precos-section">
-                <h2>Configurar Preços Base</h2>
-                <div id="formPrecosAdmin"></div>
-                <button id="btnSalvarPrecos" class="btn-submit btn-success" style="width: auto; padding: 10px 20px; margin-top: 15px;" onclick="salvarPrecosAdmin()">Salvar Preços</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        // Importações atualizadas do Firebase v10
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
-
-        // SUA NOVA CONFIGURAÇÃO
-        const firebaseConfig = {
-            apiKey: "AIzaSyDm87FZoxotFJnw5HzaLWcfYGqX5WsvMRc",
-            authDomain: "chornografic-38313.firebaseapp.com",
-            projectId: "chornografic-38313",
-            storageBucket: "chornografic-38313.firebasestorage.app",
-            messagingSenderId: "955682737767",
-            appId: "1:955682737767:web:0b4f5eafe678606f4fcec2",
-            measurementId: "G-GJMJHSEELK"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const analytics = getAnalytics(app);
-
-        // --- LÓGICA DO SITE ---
-        const categoriasServicos = ['Identidade Visual', 'Publicidade', 'Editorial', 'Interface', 'Embalagens', 'Motion Graphics', 'Ambiental'];
-        let precosGlobais = {};
-
-        async function carregarPrecosIniciais() {
-            try {
-                const docSnap = await getDoc(doc(db, "configuracoes", "precos"));
-                if (docSnap.exists()) {
-                    precosGlobais = docSnap.data();
-                }
-            } catch (e) { console.log("Erro ao carregar preços."); }
-        }
-        carregarPrecosIniciais();
-
-        // Background slider
-        const bgSlides = document.querySelectorAll('.bg-slide');
-        let bgAtual = 0;
-        setInterval(() => {
-            bgSlides[bgAtual].classList.remove('active');
-            bgAtual = (bgAtual + 1) % bgSlides.length;
-            bgSlides[bgAtual].classList.add('active');
-        }, 3000);
-
-        window.fecharModal = function(idModal) { document.getElementById(idModal).style.display = 'none'; }
-
-        window.abrirModal = function(servico) {
-            document.getElementById('modalTitle').innerText = servico;
-            document.getElementById('serviceType').value = servico;
-            let precoDefinido = precosGlobais[servico];
-            document.getElementById('precoDisplay').innerText = precoDefinido ? `Valor em média: ${precoDefinido}` : "Valor: A combinar";
-            document.getElementById('modal').style.display = 'flex';
-        }
-
-        // --- PORTFÓLIO ---
-        const modelos = document.querySelectorAll('.modelo-slide');
-        const contadorText = document.getElementById('contadorModelos');
-        let modeloAtual = 0;
-
-        window.abrirModalModelos = function() { document.getElementById('modalModelos').style.display = 'flex'; }
-        window.mudarModelo = function(direcao) {
-            modelos[modeloAtual].classList.remove('active');
-            modeloAtual = (modeloAtual + direcao + modelos.length) % modelos.length;
-            modelos[modeloAtual].classList.add('active');
-            contadorText.innerText = (modeloAtual + 1) + " / " + modelos.length;
-        }
-
-        // --- ENVIAR PEDIDO ---
-        window.enviarPedido = async function(event) {
-            event.preventDefault();
-            const btn = document.querySelector('#orderForm .btn-submit');
-            btn.innerText = "Salvando...";
-            btn.disabled = true;
-
-            try {
-                await addDoc(collection(db, "pedidos"), {
-                    nome: document.getElementById('nome').value,
-                    whatsapp: document.getElementById('whatsapp').value,
-                    servico: document.getElementById('serviceType').value,
-                    data: new Date().toLocaleString('pt-BR'),
-                    timestamp: Date.now()
-                });
-                fecharModal('modal');
-                document.getElementById('orderForm').reset();
-                document.getElementById('modalSucesso').style.display = 'flex';
-            } catch (error) { alert("Erro ao enviar pedido."); }
-            finally { btn.innerText = "Enviar Pedido"; btn.disabled = false; }
-        }
-
-        // --- ADMIN ---
-        window.abrirLoginAdmin = function() { document.getElementById('modalLogin').style.display = 'flex'; }
-        window.verificarSenha = function(event) {
-            event.preventDefault();
-            if (document.getElementById('senhaAdmin').value === 'gustavo2026') {
-                fecharModal('modalLogin');
-                carregarPainelAdmin();
-            } else { alert('Senha incorreta!'); }
-        }
-
-        async function carregarPainelAdmin() {
-            const divLista = document.getElementById('listaPedidos');
-            divLista.innerHTML = 'Buscando...';
-            document.getElementById('modalPainel').style.display = 'flex';
-
-            try {
-                const q = query(collection(db, "pedidos"), orderBy("timestamp", "desc"));
-                const querySnapshot = await getDocs(q);
-                let html = '<table class="admin-table"><tr><th>Data</th><th>Cliente</th><th>Serviço</th></tr>';
-                querySnapshot.forEach((doc) => {
-                    const p = doc.data();
-                    html += `<tr><td>${p.data}</td><td>${p.nome}<br>${p.whatsapp}</td><td>${p.servico}</td></tr>`;
-                });
-                divLista.innerHTML = html + '</table>';
-
-                // Form Preços
-                let formHtml = '';
-                categoriasServicos.forEach(cat => {
-                    formHtml += `<div class="form-group"><label>${cat}</label>
-                    <input type="text" id="input_${cat.replace(/\s/g, '')}" value="${precosGlobais[cat] || ''}"></div>`;
-                });
-                document.getElementById('formPrecosAdmin').innerHTML = formHtml;
-            } catch (e) { divLista.innerHTML = "Erro ao carregar."; }
-        }
-
-        window.salvarPrecosAdmin = async function() {
-            let novos = {};
-            categoriasServicos.forEach(cat => {
-                novos[cat] = document.getElementById(`input_${cat.replace(/\s/g, '')}`).value;
-            });
-            try {
-                await setDoc(doc(db, "configuracoes", "precos"), novos);
-                precosGlobais = novos;
-                alert("Salvo!");
-            } catch (e) { alert("Erro ao salvar."); }
-        }
-
-        window.limparPedidos = async function() {
-            if(confirm('Apagar tudo?')) {
-                const snap = await getDocs(collection(db, "pedidos"));
-                snap.forEach(async (d) => await deleteDoc(doc(db, "pedidos", d.id)));
-                carregarPainelAdmin();
+            if(tabId === 'tab-map' && window.mapInstance) {
+                setTimeout(() => window.mapInstance.invalidateSize(), 150);
             }
         }
     </script>
+
+    <script type="module" src="app.js"></script>
+
 </body>
 </html>
