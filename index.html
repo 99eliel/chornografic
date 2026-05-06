@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Catálogo de Árvores - Meio Ambiente</title>
     
+    <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2E7D32">
     <link rel="apple-touch-icon" href="icon-192.png">
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 
     <style>
@@ -16,6 +18,7 @@
             --primary: #2E7D32;
             --secondary: #4CAF50;
             --danger: #d32f2f;
+            --warning: #f57c00;
             --bg: #f4f7f6;
             --text: #333;
         }
@@ -40,53 +43,28 @@
             z-index: 10;
         }
 
-        .tabs {
-            display: flex;
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
+        .tabs { display: flex; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .tab-btn {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            color: #666;
+            flex: 1; padding: 15px; text-align: center; background: none; border: none;
+            border-bottom: 3px solid transparent; font-weight: bold; font-size: 16px; cursor: pointer; color: #666;
         }
-
-        .tab-btn.active {
-            color: var(--primary);
-            border-bottom: 3px solid var(--primary);
-        }
-
-        .tab-content {
-            display: none;
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .tab-content { display: none; flex: 1; padding: 20px; overflow-y: auto; }
+        .tab-content.active { display: block; }
 
         .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
         label { font-weight: bold; margin-bottom: 5px; }
-        input[type="text"], input[type="file"] { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        input[type="text"], input[type="file"], textarea { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; font-family: inherit; }
         
         .btn {
-            background-color: var(--secondary); color: white; border: none; padding: 14px;
-            font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;
-            margin-bottom: 10px;
+            background-color: var(--secondary); color: white; border: none; padding: 12px;
+            font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;
         }
-        .btn:hover { background-color: var(--primary); }
+        .btn:hover { opacity: 0.9; }
         .btn-location { background-color: #0277bd; }
-        .btn-danger { background-color: var(--danger); padding: 8px; font-size: 14px; width: auto; }
+        .btn-danger { background-color: var(--danger); }
+        .btn-warning { background-color: var(--warning); }
+        .btn-small { padding: 8px; font-size: 14px; width: auto; margin: 0; }
 
         #location-status { font-size: 14px; color: var(--danger); font-weight: bold; display: block; margin-bottom: 15px; text-align: center; }
         .success-text { color: var(--primary) !important; }
@@ -100,8 +78,28 @@
         .tree-card img { width: 70px; height: 70px; border-radius: 6px; object-fit: cover; margin-right: 15px; }
         .tree-info { flex: 1; }
         .tree-info h3 { margin-bottom: 5px; font-size: 18px; }
+        .actions-col { display: flex; flex-direction: column; gap: 5px; }
         
         #loader { display: none; text-align: center; padding: 20px; font-weight: bold; color: var(--primary); }
+
+        /* Estilos do Modal de Gerenciamento */
+        .modal {
+            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background-color: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px;
+            max-height: 90vh; overflow-y: auto; position: relative;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        .close-btn { font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; border: none; background: none; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; margin-left: 10px; }
+        .bg-ativa { background-color: var(--secondary); }
+        .bg-removida { background-color: var(--danger); }
+        .podas-list { list-style: none; padding: 0; margin-bottom: 15px; border: 1px solid #eee; border-radius: 4px; max-height: 100px; overflow-y: auto; }
+        .podas-list li { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .podas-list li:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
@@ -113,9 +111,10 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab('tab-add', this)">Catalogar</button>
         <button class="tab-btn" onclick="openTab('tab-map', this)">Ver Mapa</button>
-        <button class="tab-btn" onclick="openTab('tab-manage', this)">Gerenciar</button>
+        <button class="tab-btn" onclick="openTab('tab-manage', this)">Lista</button>
     </div>
 
+    <!-- Aba Adicionar -->
     <div id="tab-add" class="tab-content active">
         <form id="treeForm">
             <div class="form-group">
@@ -139,16 +138,50 @@
         <div id="loader">Enviando dados para o Firebase...</div>
     </div>
 
+    <!-- Aba Mapa -->
     <div id="tab-map" class="tab-content" style="padding: 0;">
         <div id="map"></div>
     </div>
 
+    <!-- Aba Lista (Gerenciar) -->
     <div id="tab-manage" class="tab-content">
         <div id="treeList">
             <p style="text-align:center;">Buscando registros...</p>
         </div>
     </div>
 
+    <!-- MODAL DE GERENCIAMENTO DA ÁRVORE -->
+    <div id="manageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalNome" style="display: inline;">Nome da Árvore</h3>
+                    <span id="modalStatusBadge" class="status-badge bg-ativa">Ativa</span>
+                </div>
+                <button class="close-btn" onclick="fecharModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Observações do Fiscais/Gestor:</label>
+                <textarea id="modalObs" rows="3" placeholder="Ex: Árvore apresentando fungos, necessidade de adubo..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Histórico de Podas:</label>
+                <ul id="modalPodas" class="podas-list">
+                    <!-- As datas de poda entram aqui -->
+                </ul>
+                <button class="btn btn-warning" onclick="registrarPodaHoje()">✂️ Registrar Poda Hoje</button>
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ccc;">
+
+            <button class="btn" onclick="salvarAlteracoesTree()">💾 Salvar Alterações</button>
+            <button id="btnRemoverTree" class="btn btn-danger" onclick="alternarStatusRemovida()">⚠️ Marcar como Removida</button>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     
     <script>
