@@ -1,48 +1,49 @@
-// Atualizado para v4 para forçar o navegador a apagar a versão velha!
-const CACHE_NAME = 'chronographic-v4'; 
-const urlsToCache = [
-  './',
-  './index.html',
-  './manifest.json'
+const CACHE_NAME = 'v2_eco_app'; // Alterado para v2 para forçar a primeira limpeza
+const assets = [
+  './', 
+  './index.html', 
+  './app.js', 
+  './manifest.json',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-self.addEventListener('install', event => {
-  self.skipWaiting(); 
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
+// Instalação: Baixa os arquivos principais, mas não trava esperando.
+self.addEventListener('install', e => {
+  self.skipWaiting(); // Força o Service Worker a assumir o controle imediatamente
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(assets))
   );
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+// Ativação: Limpa QUALQUER cache antigo que não seja a versão atual (v2)
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(keys
+        .filter(key => key !== CACHE_NAME)
+        .map(key => caches.delete(key))
       );
     })
   );
-  self.clients.claim(); 
+  self.clients.claim(); // Garante que a página atual já use o novo Service Worker
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request)
+// Interceptação das requisições: Estratégia "Network First" (Rede Primeiro)
+self.addEventListener('fetch', e => {
+  e.respondWith(
+    fetch(e.request)
       .then(response => {
-        const responseClone = response.clone();
+        // Se a internet funcionou e baixou o arquivo mais novo, atualizamos o cache
+        const resClone = response.clone();
         caches.open(CACHE_NAME).then(cache => {
-          cache.put(event.request, responseClone);
+          cache.put(e.request, resClone);
         });
-        return response; 
+        return response;
       })
       .catch(() => {
-        return caches.match(event.request);
+        // Se a internet caiu ou falhou, tenta buscar o arquivo no cache salvo
+        return caches.match(e.request);
       })
   );
 });
