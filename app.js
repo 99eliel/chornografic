@@ -4,7 +4,7 @@ import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot
 import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 // ==========================================
-// CONFIGURAÇÃO FIREBASE (Eliel)
+// CONFIGURAÇÃO FIREBASE 
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyAqUJYK3L0e77NYh_hE176CY3SV-jg3-Yc",
@@ -21,22 +21,22 @@ const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Memória local para acesso rápido das árvores ao abrir o Modal
 window.arvoresData = {};
 window.arvoreEditandoId = null;
 
 // ==========================================
-// INICIALIZAÇÃO DO MAPA
+// INICIALIZAÇÃO DO MAPA E ÍCONES CUSTOMIZADOS
 // ==========================================
-const map = L.map('map').setView([-17.5255, -49.5218], 14);
+const map = L.map('map').setView([-17.5255, -49.5218], 14); // Pontalina GO
 window.mapInstance = map;
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
 let markers = [];
+
+// Criando classes CSS como ícones pro Leaflet
+const iconArvore = L.divIcon({ className: 'marker-arvore', iconSize: [20, 20] });
+const iconVistoria = L.divIcon({ className: 'marker-vistoria', iconSize: [20, 20] });
 
 // ==========================================
 // FUNÇÕES DE GPS E UPLOAD
@@ -44,63 +44,56 @@ let markers = [];
 document.getElementById('getLocationBtn').addEventListener('click', () => {
     const status = document.getElementById('location-status');
     status.textContent = "Buscando GPS...";
-    
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                document.getElementById('latitude').value = position.coords.latitude;
-                document.getElementById('longitude').value = position.coords.longitude;
-                status.textContent = `Localização OK!`;
-                status.classList.add('success-text');
+            (pos) => {
+                document.getElementById('latitude').value = pos.coords.latitude;
+                document.getElementById('longitude').value = pos.coords.longitude;
+                status.textContent = `GPS OK!`; status.classList.add('success-text');
             },
-            () => {
-                alert("Erro ao obter GPS. Verifique as permissões.");
-                status.textContent = "Erro no GPS.";
-            },
+            () => { alert("Erro de GPS. Verifique permissões."); status.textContent = "Erro no GPS."; },
             { enableHighAccuracy: true }
         );
     }
 });
 
 function getBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
+    return new Promise((res, rej) => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = () => res(reader.result); reader.onerror = e => rej(e);
     });
 }
 
 // ==========================================
-// SALVAR NOVA ÁRVORE NO BANCO
+// SALVAR NOVO REGISTRO NO BANCO
 // ==========================================
 document.getElementById('treeForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const tipo = document.getElementById('regTipo').value;
     const name = document.getElementById('treeName').value;
+    const rua = document.getElementById('regRua').value;
     const photoInput = document.getElementById('treePhoto').files[0];
     const lat = document.getElementById('latitude').value;
     const lng = document.getElementById('longitude').value;
 
-    if (!lat || !lng) {
-        alert("Por favor, capture o GPS primeiro.");
-        return;
-    }
+    if (!lat || !lng) { alert("Capture o GPS primeiro."); return; }
 
     document.getElementById('submitBtn').style.display = 'none';
     document.getElementById('loader').style.display = 'block';
 
     try {
         const photoBase64 = await getBase64(photoInput);
-        const fileName = `arvores/${Date.now()}_${photoInput.name}`;
+        const fileName = `registros/${Date.now()}_${photoInput.name}`;
         const storageRef = ref(storage, fileName);
         
         await uploadString(storageRef, photoBase64, 'data_url');
         const photoURL = await getDownloadURL(storageRef);
 
-        // Adicionamos os novos campos: status, observacao e podas
         await addDoc(collection(db, "arvores"), {
+            tipo: tipo,
             nome: name,
+            rua: rua,
             fotoUrl: photoURL,
             fotoPath: fileName,
             latitude: parseFloat(lat),
@@ -111,119 +104,149 @@ document.getElementById('treeForm').addEventListener('submit', async (e) => {
             podas: [] 
         });
 
-        alert("Árvore catalogada com sucesso!");
+        alert("Registro salvo com sucesso!");
         document.getElementById('treeForm').reset();
         document.getElementById('location-status').textContent = "GPS não capturado";
         document.getElementById('location-status').classList.remove('success-text');
 
-    } catch (error) {
-        console.error(error);
-        alert("Erro ao salvar.");
-    } finally {
+    } catch (error) { console.error(error); alert("Erro ao salvar."); } 
+    finally {
         document.getElementById('submitBtn').style.display = 'block';
         document.getElementById('loader').style.display = 'none';
     }
 });
 
 // ==========================================
-// LÓGICA DE SINCRONIZAÇÃO (LISTA E MAPA)
+// RENDERIZAÇÃO DA LISTA COM FILTROS
 // ==========================================
-onSnapshot(collection(db, "arvores"), (snapshot) => {
+function atualizarInterfaceListaEMapa() {
     const listDiv = document.getElementById('treeList');
     listDiv.innerHTML = '';
+    
+    // Limpa mapa
     markers.forEach(m => map.removeLayer(m));
     markers = [];
-    window.arvoresData = {}; // Reseta a memória local
 
-    if (snapshot.empty) {
-        listDiv.innerHTML = '<p style="text-align:center;">Nenhum registro encontrado.</p>';
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroRua = document.getElementById('filtroRua').value.toLowerCase();
+
+    let contArvore = 0;
+    let contVistoria = 0;
+
+    const registros = Object.entries(window.arvoresData);
+
+    if (registros.length === 0) {
+        listDiv.innerHTML = '<p style="text-align:center;">Nenhum registro no banco de dados.</p>';
+        document.getElementById('resumoFiltro').textContent = "0 registros encontrados.";
         return;
     }
 
-    snapshot.forEach((docSnap) => {
-        const tree = docSnap.data();
-        const id = docSnap.id;
-        
-        // Salva na memória global para o Modal usar depois
-        window.arvoresData[id] = tree;
+    registros.forEach(([id, reg]) => {
+        // Aplica os filtros
+        if (filtroTipo !== 'todos' && reg.tipo !== filtroTipo) return;
+        if (filtroRua && reg.rua && !reg.rua.toLowerCase().includes(filtroRua)) return;
 
-        // --- Lógica do Mapa ---
-        const isRemovida = tree.status === 'removida';
-        // Se estiver removida, deixa o pino transparente para diferenciar visualmente
+        // Contadores
+        if(reg.tipo === 'arvore') contArvore++;
+        else contVistoria++;
+
+        // --- Adicionar ao Mapa ---
+        const isRemovida = reg.status === 'removida';
         const opacity = isRemovida ? 0.5 : 1.0; 
+        const iconUsado = reg.tipo === 'arvore' ? iconArvore : iconVistoria;
         
-        const marker = L.marker([tree.latitude, tree.longitude], { opacity: opacity }).addTo(map);
+        const marker = L.marker([reg.latitude, reg.longitude], { icon: iconUsado, opacity: opacity }).addTo(map);
         
-        const statusTextMap = isRemovida ? '<span style="color:red;">(Removida)</span>' : '<span style="color:green;">(Ativa)</span>';
         marker.bindPopup(`
             <div style="text-align:center;">
-                <b>${tree.nome}</b> <br>${statusTextMap}<br>
-                <img src="${tree.fotoUrl}" width="100" style="margin: 5px 0; border-radius:4px;"><br>
+                <b>${reg.nome}</b><br>
+                <span style="font-size:12px;">${reg.rua || 'Sem rua'}</span><br>
+                <img src="${reg.fotoUrl}" width="100" style="margin: 5px 0; border-radius:4px;"><br>
                 <button class="btn btn-small" onclick="abrirModal('${id}')" style="margin-top:5px; padding: 5px 10px;">⚙️ Gerenciar</button>
             </div>
         `);
         markers.push(marker);
 
-        // --- Lógica da Lista ---
+        // --- Adicionar à Lista ---
         const card = document.createElement('div');
-        card.className = 'tree-card';
-        // Deixa a foto preto e branco se foi removida
+        card.className = `tree-card tipo-${reg.tipo}`;
+        
         const imgStyle = isRemovida ? 'filter: grayscale(100%); opacity: 0.7;' : '';
-        const badgeStatus = isRemovida 
-            ? `<span class="status-badge bg-removida" style="margin-left:0; font-size:10px;">REMOVIDA</span>` 
-            : ``;
+        const badgeStatus = isRemovida ? `<span class="badge bg-removida">Inativa</span>` : ``;
+        const tipoLabel = reg.tipo === 'arvore' ? '🌳 Árvore' : '📋 Vistoria';
 
         card.innerHTML = `
-            <img src="${tree.fotoUrl}" style="${imgStyle}">
+            <img src="${reg.fotoUrl}" style="${imgStyle}">
             <div class="tree-info">
-                <h3>${tree.nome}</h3>
-                <p style="font-size: 12px; color: #666;">Registrada: ${tree.dataRegistro}</p>
+                <h3>${reg.nome}</h3>
+                <p><strong>Rua:</strong> ${reg.rua || 'Não informada'}</p>
+                <p>${tipoLabel} | Reg: ${reg.dataRegistro}</p>
                 ${badgeStatus}
             </div>
             <div class="actions-col">
                 <button class="btn btn-small" onclick="abrirModal('${id}')" style="background-color: #0277bd;">Gerenciar</button>
-                <button class="btn btn-danger btn-small" onclick="excluirArvore('${id}', '${tree.fotoPath}')">Excluir</button>
+                <button class="btn btn-danger btn-small" onclick="excluirArvore('${id}', '${reg.fotoPath}')">Excluir</button>
             </div>
         `;
         listDiv.appendChild(card);
     });
+
+    // Atualiza o painel de resumo
+    document.getElementById('resumoFiltro').textContent = 
+        `Encontrados: ${contArvore} Árvore(s) | ${contVistoria} Vistoria(s)`;
+}
+
+// Eventos de digitação e mudança para rodar os filtros na hora
+document.getElementById('filtroTipo').addEventListener('change', atualizarInterfaceListaEMapa);
+document.getElementById('filtroRua').addEventListener('input', atualizarInterfaceListaEMapa);
+
+// ==========================================
+// PUXAR DADOS DO FIREBASE (EM TEMPO REAL)
+// ==========================================
+onSnapshot(collection(db, "arvores"), (snapshot) => {
+    window.arvoresData = {};
+    snapshot.forEach(docSnap => {
+        window.arvoresData[docSnap.id] = docSnap.data();
+    });
+    atualizarInterfaceListaEMapa();
 });
 
 // ==========================================
 // FUNÇÕES DO MODAL (GERENCIAR DETALHES)
 // ==========================================
-
 window.abrirModal = (id) => {
-    const tree = window.arvoresData[id];
-    if(!tree) return;
+    const reg = window.arvoresData[id];
+    if(!reg) return;
     
     window.arvoreEditandoId = id;
     
-    // Preenche os dados
-    document.getElementById('modalNome').textContent = tree.nome;
-    document.getElementById('modalObs').value = tree.observacao || '';
+    // Preenche os textos
+    document.getElementById('modalNome').textContent = reg.nome;
+    document.getElementById('modalRua').textContent = `Endereço: ${reg.rua || 'N/A'}`;
+    document.getElementById('modalObs').value = reg.observacao || '';
     
-    // Lida com o Status
-    const badge = document.getElementById('modalStatusBadge');
-    const btnRemover = document.getElementById('btnRemoverTree');
-    
-    if (tree.status === 'removida') {
-        badge.textContent = 'Removida';
-        badge.className = 'status-badge bg-removida';
-        btnRemover.textContent = '✅ Restaurar para Ativa';
-        btnRemover.className = 'btn btn-secondary';
-        btnRemover.style.backgroundColor = '#4CAF50';
+    // Badge de Tipo
+    const badgeTipo = document.getElementById('modalTipoBadge');
+    if(reg.tipo === 'arvore') {
+        badgeTipo.textContent = 'Árvore'; badgeTipo.className = 'badge bg-arvore';
     } else {
-        badge.textContent = 'Ativa';
-        badge.className = 'status-badge bg-ativa';
-        btnRemover.textContent = '⚠️ Marcar como Removida';
-        btnRemover.className = 'btn btn-danger';
-        btnRemover.style.backgroundColor = ''; // Volta ao CSS padrão
+        badgeTipo.textContent = 'Vistoria'; badgeTipo.className = 'badge bg-vistoria';
     }
 
-    // Lida com as Podas
-    renderizarListaPodas(tree.podas || []);
+    // Badge e Botão de Status
+    const badgeStatus = document.getElementById('modalStatusBadge');
+    const btnRemover = document.getElementById('btnRemoverTree');
+    
+    if (reg.status === 'removida') {
+        badgeStatus.textContent = 'Inativa / Removida'; badgeStatus.className = 'badge bg-removida';
+        btnRemover.textContent = '✅ Restaurar para Ativa'; btnRemover.style.backgroundColor = '#4CAF50';
+    } else {
+        badgeStatus.textContent = 'Ativa'; badgeStatus.className = 'badge bg-ativa';
+        btnRemover.textContent = '⚠️ Marcar Inativa/Removida'; btnRemover.style.backgroundColor = 'var(--danger)';
+    }
 
+    // Histórico de Serviços
+    renderizarListaPodas(reg.podas || []);
     document.getElementById('manageModal').classList.add('active');
 };
 
@@ -235,80 +258,57 @@ window.fecharModal = () => {
 function renderizarListaPodas(podasArray) {
     const ul = document.getElementById('modalPodas');
     ul.innerHTML = '';
-    if (podasArray.length === 0) {
-        ul.innerHTML = '<li>Nenhuma poda registrada.</li>';
-        return;
-    }
+    if (podasArray.length === 0) { ul.innerHTML = '<li>Nenhum serviço registrado.</li>'; return; }
     podasArray.forEach(poda => {
-        const li = document.createElement('li');
-        li.textContent = `Poda realizada em: ${poda}`;
-        ul.appendChild(li);
+        const li = document.createElement('li'); li.textContent = `Serviço em: ${poda}`; ul.appendChild(li);
     });
 }
 
 window.registrarPodaHoje = () => {
-    const tree = window.arvoresData[window.arvoreEditandoId];
-    if(!tree.podas) tree.podas = [];
-    
-    const dataHoje = new Date().toLocaleDateString('pt-BR');
-    tree.podas.push(dataHoje);
-    renderizarListaPodas(tree.podas);
+    const reg = window.arvoresData[window.arvoreEditandoId];
+    if(!reg.podas) reg.podas = [];
+    reg.podas.push(new Date().toLocaleDateString('pt-BR'));
+    renderizarListaPodas(reg.podas);
 };
 
 window.alternarStatusRemovida = () => {
-    const tree = window.arvoresData[window.arvoreEditandoId];
-    tree.status = tree.status === 'removida' ? 'ativa' : 'removida';
+    const reg = window.arvoresData[window.arvoreEditandoId];
+    reg.status = reg.status === 'removida' ? 'ativa' : 'removida';
     
-    // Atualiza visual do Modal na hora
-    const badge = document.getElementById('modalStatusBadge');
+    const badgeStatus = document.getElementById('modalStatusBadge');
     const btnRemover = document.getElementById('btnRemoverTree');
     
-    if (tree.status === 'removida') {
-        badge.textContent = 'Removida';
-        badge.className = 'status-badge bg-removida';
-        btnRemover.textContent = '✅ Restaurar para Ativa';
-        btnRemover.style.backgroundColor = '#4CAF50';
+    if (reg.status === 'removida') {
+        badgeStatus.textContent = 'Inativa / Removida'; badgeStatus.className = 'badge bg-removida';
+        btnRemover.textContent = '✅ Restaurar para Ativa'; btnRemover.style.backgroundColor = '#4CAF50';
     } else {
-        badge.textContent = 'Ativa';
-        badge.className = 'status-badge bg-ativa';
-        btnRemover.textContent = '⚠️ Marcar como Removida';
-        btnRemover.style.backgroundColor = 'var(--danger)';
+        badgeStatus.textContent = 'Ativa'; badgeStatus.className = 'badge bg-ativa';
+        btnRemover.textContent = '⚠️ Marcar Inativa/Removida'; btnRemover.style.backgroundColor = 'var(--danger)';
     }
 };
 
 window.salvarAlteracoesTree = async () => {
     const id = window.arvoreEditandoId;
-    const treeModificada = window.arvoresData[id];
+    const regModificado = window.arvoresData[id];
     const novaObs = document.getElementById('modalObs').value;
 
     try {
-        const docRef = doc(db, "arvores", id);
-        await updateDoc(docRef, {
+        await updateDoc(doc(db, "arvores", id), {
             observacao: novaObs,
-            status: treeModificada.status,
-            podas: treeModificada.podas
+            status: regModificado.status,
+            podas: regModificado.podas
         });
-        
-        alert('Alterações salvas com sucesso!');
+        alert('Alterações salvas!');
         window.fecharModal();
-    } catch (error) {
-        console.error("Erro ao atualizar: ", error);
-        alert('Erro ao salvar as edições.');
-    }
+    } catch (error) { console.error(error); alert('Erro ao salvar edições.'); }
 };
 
-// Exclusão Total (Apaga do Banco e o Arquivo de Imagem)
 window.excluirArvore = async (id, path) => {
-    if(confirm("Deseja apagar DEFINITIVAMENTE este registro do sistema?")) {
+    if(confirm("Deseja apagar DEFINITIVAMENTE este registro?")) {
         try {
             await deleteDoc(doc(db, "arvores", id));
-            if(path) {
-                await deleteObject(ref(storage, path));
-            }
-        } catch(e) {
-            console.error(e);
-            alert("Erro ao excluir do banco.");
-        }
+            if(path) await deleteObject(ref(storage, path));
+        } catch(e) { console.error(e); alert("Erro ao excluir."); }
     }
 };
 
@@ -316,7 +316,5 @@ window.excluirArvore = async (id, path) => {
 // SERVICE WORKER PWA
 // ==========================================
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
-    });
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.log(e)));
 }
