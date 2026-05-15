@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Catálogo de Árvores - Meio Ambiente</title>
+    <title>Gestão Ambiental - PM</title>
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -18,52 +18,32 @@
             --primary: #2E7D32;
             --secondary: #4CAF50;
             --danger: #d32f2f;
-            --warning: #f57c00;
+            --warning: #fbc02d;
+            --info: #1976d2;
             --bg: #f4f7f6;
             --text: #333;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        header {
-            background-color: var(--primary);
-            color: white;
-            padding: 1rem;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 10;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+        header { background-color: var(--primary); color: white; padding: 1rem; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; }
 
         .tabs { display: flex; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .tab-btn {
-            flex: 1; padding: 15px; text-align: center; background: none; border: none;
-            border-bottom: 3px solid transparent; font-weight: bold; font-size: 16px; cursor: pointer; color: #666;
-        }
+        .tab-btn { flex: 1; padding: 15px; text-align: center; background: none; border: none; border-bottom: 3px solid transparent; font-weight: bold; font-size: 16px; cursor: pointer; color: #666; }
         .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
         .tab-content { display: none; flex: 1; padding: 20px; overflow-y: auto; }
         .tab-content.active { display: block; }
 
         .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-        label { font-weight: bold; margin-bottom: 5px; }
-        input[type="text"], input[type="file"], textarea { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; font-family: inherit; }
+        label { font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555;}
+        input[type="text"], input[type="file"], textarea, select { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; font-family: inherit; }
         
-        .btn {
-            background-color: var(--secondary); color: white; border: none; padding: 12px;
-            font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px;
-        }
+        .btn { background-color: var(--secondary); color: white; border: none; padding: 12px; font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         .btn:hover { opacity: 0.9; }
         .btn-location { background-color: #0277bd; }
         .btn-danger { background-color: var(--danger); }
-        .btn-warning { background-color: var(--warning); }
+        .btn-warning { background-color: var(--warning); color: #333;}
         .btn-small { padding: 8px; font-size: 14px; width: auto; margin: 0; }
 
         #location-status { font-size: 14px; color: var(--danger); font-weight: bold; display: block; margin-bottom: 15px; text-align: center; }
@@ -71,55 +51,73 @@
 
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        .tree-card {
-            background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between;
-        }
-        .tree-card img { width: 70px; height: 70px; border-radius: 6px; object-fit: cover; margin-right: 15px; }
+        /* Estilos dos Marcadores do Mapa */
+        .marker-arvore { background-color: var(--info); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); width: 20px !important; height: 20px !important; margin-top: -10px; margin-left: -10px; }
+        .marker-vistoria { background-color: var(--warning); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); width: 20px !important; height: 20px !important; margin-top: -10px; margin-left: -10px; }
+
+        /* Lista e Filtros */
+        .filter-section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filter-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .filter-row input, .filter-row select { flex: 1; }
+        #resumoFiltro { font-size: 14px; font-weight: bold; color: var(--primary); text-align: center; }
+
+        .tree-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; border-left: 5px solid transparent; }
+        .tree-card.tipo-arvore { border-left-color: var(--info); }
+        .tree-card.tipo-vistoria { border-left-color: var(--warning); }
+        .tree-card img { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; margin-right: 15px; }
         .tree-info { flex: 1; }
-        .tree-info h3 { margin-bottom: 5px; font-size: 18px; }
+        .tree-info h3 { margin-bottom: 3px; font-size: 16px; }
+        .tree-info p { margin-bottom: 2px; font-size: 12px; color: #666; }
         .actions-col { display: flex; flex-direction: column; gap: 5px; }
         
         #loader { display: none; text-align: center; padding: 20px; font-weight: bold; color: var(--primary); }
 
-        /* Estilos do Modal de Gerenciamento */
-        .modal {
-            display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;
-        }
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
         .modal.active { display: flex; }
-        .modal-content {
-            background-color: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px;
-            max-height: 90vh; overflow-y: auto; position: relative;
-        }
+        .modal-content { background-color: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
         .close-btn { font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; border: none; background: none; }
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; color: white; margin-left: 10px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; display: inline-block; margin-bottom: 5px; }
         .bg-ativa { background-color: var(--secondary); }
         .bg-removida { background-color: var(--danger); }
+        .bg-arvore { background-color: var(--info); }
+        .bg-vistoria { background-color: var(--warning); color: #333; }
         .podas-list { list-style: none; padding: 0; margin-bottom: 15px; border: 1px solid #eee; border-radius: 4px; max-height: 100px; overflow-y: auto; }
         .podas-list li { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .podas-list li:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
 
     <header>
-        <h2>Secretaria de Meio Ambiente</h2>
+        <h2>Gestão Ambiental</h2>
     </header>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="openTab('tab-add', this)">Catalogar</button>
-        <button class="tab-btn" onclick="openTab('tab-map', this)">Ver Mapa</button>
+        <button class="tab-btn active" onclick="openTab('tab-add', this)">Registrar</button>
+        <button class="tab-btn" onclick="openTab('tab-map', this)">Mapa</button>
         <button class="tab-btn" onclick="openTab('tab-manage', this)">Lista</button>
     </div>
 
-    <!-- Aba Adicionar -->
+    <!-- Aba Registrar -->
     <div id="tab-add" class="tab-content active">
         <form id="treeForm">
             <div class="form-group">
-                <label for="treeName">Espécie da Árvore:</label>
-                <input type="text" id="treeName" placeholder="Ex: Ipê Roxo" required>
+                <label for="regTipo">Tipo de Registro:</label>
+                <select id="regTipo" required>
+                    <option value="arvore">🌳 Catálogo de Árvore</option>
+                    <option value="vistoria">📋 Serviço / Vistoria</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="treeName">Título / Espécie:</label>
+                <input type="text" id="treeName" placeholder="Ex: Ipê Roxo ou Poda Emergencial" required>
+            </div>
+
+            <div class="form-group">
+                <label for="regRua">Rua / Avenida:</label>
+                <input type="text" id="regRua" placeholder="Ex: Av. Governador Ivo Borges" required>
             </div>
 
             <div class="form-group">
@@ -127,7 +125,7 @@
                 <input type="file" id="treePhoto" accept="image/*" capture="environment" required>
             </div>
 
-            <button type="button" class="btn btn-location" id="getLocationBtn">📍 Obter Localização GPS</button>
+            <button type="button" class="btn btn-location" id="getLocationBtn">📍 Obter GPS</button>
             <span id="location-status">GPS não capturado</span>
             
             <input type="hidden" id="latitude">
@@ -135,49 +133,68 @@
 
             <button type="submit" class="btn" id="submitBtn">Salvar no Sistema</button>
         </form>
-        <div id="loader">Enviando dados para o Firebase...</div>
+        <div id="loader">Salvando no banco de dados...</div>
     </div>
 
     <!-- Aba Mapa -->
     <div id="tab-map" class="tab-content" style="padding: 0;">
         <div id="map"></div>
+        <div style="position: absolute; bottom: 10px; left: 10px; z-index: 999; background: white; padding: 5px 10px; border-radius: 4px; box-shadow: 0 0 5px rgba(0,0,0,0.3); font-size: 12px;">
+            <span style="color: var(--info); font-weight: bold;">🔵 Árvores</span> | 
+            <span style="color: var(--warning); font-weight: bold;">🟡 Vistorias</span>
+        </div>
     </div>
 
     <!-- Aba Lista (Gerenciar) -->
     <div id="tab-manage" class="tab-content">
+        
+        <div class="filter-section">
+            <div class="filter-row">
+                <select id="filtroTipo">
+                    <option value="todos">Todos os Tipos</option>
+                    <option value="arvore">Apenas Árvores</option>
+                    <option value="vistoria">Apenas Vistorias</option>
+                </select>
+            </div>
+            <div class="filter-row">
+                <input type="text" id="filtroRua" placeholder="Buscar por Rua ou Avenida...">
+            </div>
+            <div id="resumoFiltro">Carregando dados...</div>
+        </div>
+
         <div id="treeList">
             <p style="text-align:center;">Buscando registros...</p>
         </div>
     </div>
 
-    <!-- MODAL DE GERENCIAMENTO DA ÁRVORE -->
+    <!-- MODAL DE GERENCIAMENTO -->
     <div id="manageModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <h3 id="modalNome" style="display: inline;">Nome da Árvore</h3>
-                    <span id="modalStatusBadge" class="status-badge bg-ativa">Ativa</span>
+                    <span id="modalTipoBadge" class="badge bg-arvore">Árvore</span>
+                    <h3 id="modalNome" style="margin: 0;">Título do Registro</h3>
+                    <p id="modalRua" style="margin: 2px 0 5px 0; font-size: 13px; color: #666;"></p>
+                    <span id="modalStatusBadge" class="badge bg-ativa">Ativa</span>
                 </div>
                 <button class="close-btn" onclick="fecharModal()">&times;</button>
             </div>
             
             <div class="form-group">
-                <label>Observações do Fiscais/Gestor:</label>
-                <textarea id="modalObs" rows="3" placeholder="Ex: Árvore apresentando fungos, necessidade de adubo..."></textarea>
+                <label>Observações do Fiscal/Gestor:</label>
+                <textarea id="modalObs" rows="3" placeholder="Insira detalhes da vistoria ou manejo..."></textarea>
             </div>
 
             <div class="form-group">
-                <label>Histórico de Podas:</label>
-                <ul id="modalPodas" class="podas-list">
-                    <!-- As datas de poda entram aqui -->
-                </ul>
-                <button class="btn btn-warning" onclick="registrarPodaHoje()">✂️ Registrar Poda Hoje</button>
+                <label>Histórico de Podas / Serviços:</label>
+                <ul id="modalPodas" class="podas-list"></ul>
+                <button class="btn btn-warning" onclick="registrarPodaHoje()">➕ Registrar Serviço Hoje</button>
             </div>
 
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ccc;">
 
             <button class="btn" onclick="salvarAlteracoesTree()">💾 Salvar Alterações</button>
-            <button id="btnRemoverTree" class="btn btn-danger" onclick="alternarStatusRemovida()">⚠️ Marcar como Removida</button>
+            <button id="btnRemoverTree" class="btn btn-danger" onclick="alternarStatusRemovida()">⚠️ Marcar como Inativo/Removida</button>
         </div>
     </div>
 
