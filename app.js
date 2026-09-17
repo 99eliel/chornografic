@@ -1,403 +1,294 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
-import { getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getStorage, ref, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+const STORAGE_KEY = 'storyAdsLab.campaigns.v1';
+let campaigns = loadCampaigns();
+let editingId = null;
+let pendingImage = '';
 
-// ==========================================
-// CONFIGURAÇÃO FIREBASE 
-// ==========================================
-const firebaseConfig = {
-    apiKey: "AIzaSyAqUJYK3L0e77NYh_hE176CY3SV-jg3-Yc",
-    authDomain: "chornografic.firebaseapp.com",
-    projectId: "chornografic",
-    storageBucket: "chornografic.firebasestorage.app",
-    messagingSenderId: "685211286639",
-    appId: "1:685211286639:web:9444cca8dfe2e46222e19a",
-    measurementId: "G-RXNCY69R7Y"
-};
+const $ = (id) => document.getElementById(id);
+const fmtNumber = (n) => new Intl.NumberFormat('pt-BR').format(Number(n) || 0);
+const fmtMoney = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
+const fmtPct = (n) => `${(Number(n) || 0).toFixed(2).replace('.', ',')}%`;
+const safe = (value) => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-window.arvoresData = {};
-window.arvoreEditandoId = null;
-
-// ==========================================
-// INICIALIZAÇÃO DO MAPA E ÍCONES
-// ==========================================
-const map = L.map('map').setView([-17.5255, -49.5218], 14); // Pontalina GO
-window.mapInstance = map;
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-
-let markers = [];
-const iconArvore = L.divIcon({ className: 'marker-arvore', iconSize: [20, 20] });
-const iconVistoria = L.divIcon({ className: 'marker-vistoria', iconSize: [20, 20] });
-
-// ==========================================
-// FUNÇÕES DE COMPRESSÃO E GPS
-// ==========================================
-document.getElementById('getLocationBtn').addEventListener('click', () => {
-    const status = document.getElementById('location-status');
-    status.textContent = "Buscando GPS...";
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                document.getElementById('latitude').value = pos.coords.latitude;
-                document.getElementById('longitude').value = pos.coords.longitude;
-                status.textContent = `GPS OK!`; status.classList.add('success-text');
-            },
-            () => { alert("Erro de GPS. Verifique permissões."); status.textContent = "Erro no GPS."; },
-            { enableHighAccuracy: true }
-        );
-    }
-});
-
-// Comprime a imagem para não estourar a memória offline (Max 800px)
-function compressImage(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
-                const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleSize;
-                
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                // Converte para JPEG com 70% de qualidade
-                resolve(canvas.toDataURL('image/jpeg', 0.7)); 
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
+function loadCampaigns() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
 }
 
-// ==========================================
-// LÓGICA OFFLINE (FILA DE SINCRONIZAÇÃO)
-// ==========================================
-function atualizarBannerOffline() {
-    const fila = JSON.parse(localStorage.getItem('filaOffline')) || [];
-    const banner = document.getElementById('bannerOffline');
-    if (fila.length > 0) {
-        banner.style.display = 'block';
-        document.getElementById('textoOffline').textContent = `Você tem ${fila.length} registro(s) salvo(s) offline.`;
-    } else {
-        banner.style.display = 'none';
-    }
-}
-// Roda ao iniciar o app
-atualizarBannerOffline();
-
-// Botão SALVAR OFFLINE
-document.getElementById('btnSalvarOffline').addEventListener('click', async () => {
-    const tipo = document.getElementById('regTipo').value;
-    const name = document.getElementById('treeName').value;
-    const rua = document.getElementById('regRua').value;
-    const photoInput = document.getElementById('treePhoto').files[0];
-    const lat = document.getElementById('latitude').value;
-    const lng = document.getElementById('longitude').value;
-
-    if (!name || !photoInput || !lat || !lng) { 
-        alert("Preencha nome, tire a foto e pegue o GPS antes de salvar."); return; 
-    }
-
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('loader').textContent = "Comprimindo e salvando offline...";
-
-    try {
-        const base64Comprimido = await compressImage(photoInput);
-        
-        const registroOffline = {
-            id: Date.now(),
-            tipo: tipo,
-            nome: name,
-            rua: rua,
-            fotoBase64: base64Comprimido,
-            fileNameOrigem: photoInput.name,
-            latitude: parseFloat(lat),
-            longitude: parseFloat(lng),
-            dataRegistro: new Date().toLocaleDateString('pt-BR')
-        };
-
-        let fila = JSON.parse(localStorage.getItem('filaOffline')) || [];
-        fila.push(registroOffline);
-        localStorage.setItem('filaOffline', JSON.stringify(fila));
-
-        alert("Salvo offline com sucesso! Sincronize quando tiver internet.");
-        document.getElementById('treeForm').reset();
-        document.getElementById('location-status').textContent = "GPS não capturado";
-        document.getElementById('location-status').classList.remove('success-text');
-        
-        atualizarBannerOffline();
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao salvar offline.");
-    } finally {
-        document.getElementById('loader').style.display = 'none';
-    }
-});
-
-// Botão SINCRONIZAR AGORA
-window.sincronizarOffline = async () => {
-    let fila = JSON.parse(localStorage.getItem('filaOffline')) || [];
-    if (fila.length === 0) return;
-
-    if (!confirm(`Deseja enviar os ${fila.length} registros para o sistema agora?`)) return;
-
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('loader').textContent = "Sincronizando com o Firebase, não feche o app...";
-
-    try {
-        for (let i = 0; i < fila.length; i++) {
-            const item = fila[i];
-            
-            // 1. Upload da foto
-            const fileName = `registros/offline_${item.id}_${item.fileNameOrigem}`;
-            const storageRef = ref(storage, fileName);
-            await uploadString(storageRef, item.fotoBase64, 'data_url');
-            const photoURL = await getDownloadURL(storageRef);
-
-            // 2. Upload do documento
-            await addDoc(collection(db, "arvores"), {
-                tipo: item.tipo,
-                nome: item.nome,
-                rua: item.rua,
-                fotoUrl: photoURL,
-                fotoPath: fileName,
-                latitude: item.latitude,
-                longitude: item.longitude,
-                dataRegistro: item.dataRegistro,
-                status: 'ativa',
-                observacao: '',
-                podas: [] 
-            });
-        }
-
-        // Se tudo deu certo, limpa a fila
-        localStorage.removeItem('filaOffline');
-        alert("Sincronização concluída com sucesso!");
-        atualizarBannerOffline();
-
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao sincronizar. Verifique sua internet.");
-    } finally {
-        document.getElementById('loader').style.display = 'none';
-    }
-};
-
-// ==========================================
-// SALVAR ONLINE (Padrão)
-// ==========================================
-document.getElementById('treeForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const tipo = document.getElementById('regTipo').value;
-    const name = document.getElementById('treeName').value;
-    const rua = document.getElementById('regRua').value;
-    const photoInput = document.getElementById('treePhoto').files[0];
-    const lat = document.getElementById('latitude').value;
-    const lng = document.getElementById('longitude').value;
-
-    if (!lat || !lng) { alert("Capture o GPS primeiro."); return; }
-
-    document.getElementById('loader').style.display = 'block';
-    document.getElementById('loader').textContent = "Enviando dados para o Firebase...";
-
-    try {
-        const photoBase64 = await compressImage(photoInput);
-        const fileName = `registros/${Date.now()}_${photoInput.name}`;
-        const storageRef = ref(storage, fileName);
-        
-        await uploadString(storageRef, photoBase64, 'data_url');
-        const photoURL = await getDownloadURL(storageRef);
-
-        await addDoc(collection(db, "arvores"), {
-            tipo: tipo, nome: name, rua: rua, fotoUrl: photoURL, fotoPath: fileName,
-            latitude: parseFloat(lat), longitude: parseFloat(lng),
-            dataRegistro: new Date().toLocaleDateString('pt-BR'),
-            status: 'ativa', observacao: '', podas: [] 
-        });
-
-        alert("Registro online salvo com sucesso!");
-        document.getElementById('treeForm').reset();
-        document.getElementById('location-status').textContent = "GPS não capturado";
-        document.getElementById('location-status').classList.remove('success-text');
-
-    } catch (error) { console.error(error); alert("Erro ao salvar online."); } 
-    finally { document.getElementById('loader').style.display = 'none'; }
-});
-
-// ==========================================
-// RENDERIZAÇÃO E FILTROS (MAPA E LISTA)
-// ==========================================
-function atualizarInterfaceListaEMapa() {
-    const listDiv = document.getElementById('treeList');
-    listDiv.innerHTML = '';
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
-
-    const filtroTipo = document.getElementById('filtroTipo').value;
-    const filtroRua = document.getElementById('filtroRua').value.toLowerCase();
-
-    let contArvore = 0, contVistoria = 0;
-    const registros = Object.entries(window.arvoresData);
-
-    if (registros.length === 0) {
-        listDiv.innerHTML = '<p style="text-align:center;">Nenhum registro sincronizado.</p>';
-        document.getElementById('resumoFiltro').textContent = "0 registros encontrados.";
-        return;
-    }
-
-    registros.forEach(([id, reg]) => {
-        if (filtroTipo !== 'todos' && reg.tipo !== filtroTipo) return;
-        if (filtroRua && reg.rua && !reg.rua.toLowerCase().includes(filtroRua)) return;
-
-        if(reg.tipo === 'arvore') contArvore++; else contVistoria++;
-
-        const isRemovida = reg.status === 'removida';
-        const opacity = isRemovida ? 0.5 : 1.0; 
-        const iconUsado = reg.tipo === 'arvore' ? iconArvore : iconVistoria;
-        
-        const marker = L.marker([reg.latitude, reg.longitude], { icon: iconUsado, opacity: opacity }).addTo(map);
-        marker.bindPopup(`
-            <div style="text-align:center;">
-                <b>${reg.nome}</b><br><span style="font-size:12px;">${reg.rua || 'Sem rua'}</span><br>
-                <img src="${reg.fotoUrl}" width="100" style="margin: 5px 0; border-radius:4px;"><br>
-                <button class="btn btn-small" onclick="abrirModal('${id}')" style="margin-top:5px;">⚙️ Gerenciar</button>
-            </div>
-        `);
-        markers.push(marker);
-
-        const card = document.createElement('div');
-        card.className = `tree-card tipo-${reg.tipo}`;
-        const imgStyle = isRemovida ? 'filter: grayscale(100%); opacity: 0.7;' : '';
-        const badgeStatus = isRemovida ? `<span class="badge bg-removida">Inativa</span>` : ``;
-        const tipoLabel = reg.tipo === 'arvore' ? '🌳 Árvore' : '📋 Vistoria';
-
-        card.innerHTML = `
-            <img src="${reg.fotoUrl}" style="${imgStyle}">
-            <div class="tree-info">
-                <h3>${reg.nome}</h3>
-                <p><strong>Rua:</strong> ${reg.rua || 'Não informada'}</p>
-                <p>${tipoLabel} | Reg: ${reg.dataRegistro}</p>
-                ${badgeStatus}
-            </div>
-            <div class="actions-col">
-                <button class="btn btn-small" onclick="abrirModal('${id}')" style="background-color: #0277bd;">Gerenciar</button>
-                <button class="btn btn-danger btn-small" onclick="excluirArvore('${id}', '${reg.fotoPath}')">Excluir</button>
-            </div>
-        `;
-        listDiv.appendChild(card);
-    });
-
-    document.getElementById('resumoFiltro').textContent = `Encontrados: ${contArvore} Árvore(s) | ${contVistoria} Vistoria(s)`;
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+  } catch (err) {
+    alert('O navegador ficou sem espaço para salvar. Tente usar uma imagem menor ou excluir campanhas antigas.');
+    throw err;
+  }
 }
 
-document.getElementById('filtroTipo').addEventListener('change', atualizarInterfaceListaEMapa);
-document.getElementById('filtroRua').addEventListener('input', atualizarInterfaceListaEMapa);
-
-// ==========================================
-// PUXAR DADOS DO FIREBASE
-// ==========================================
-onSnapshot(collection(db, "arvores"), (snapshot) => {
-    window.arvoresData = {};
-    snapshot.forEach(docSnap => window.arvoresData[docSnap.id] = docSnap.data());
-    atualizarInterfaceListaEMapa();
-});
-
-// ==========================================
-// FUNÇÕES DO MODAL
-// ==========================================
-window.abrirModal = (id) => {
-    const reg = window.arvoresData[id];
-    if(!reg) return;
-    window.arvoreEditandoId = id;
-    
-    document.getElementById('modalNome').textContent = reg.nome;
-    document.getElementById('modalRua').textContent = `Endereço: ${reg.rua || 'N/A'}`;
-    document.getElementById('modalObs').value = reg.observacao || '';
-    
-    const badgeTipo = document.getElementById('modalTipoBadge');
-    if(reg.tipo === 'arvore') { badgeTipo.textContent = 'Árvore'; badgeTipo.className = 'badge bg-arvore'; } 
-    else { badgeTipo.textContent = 'Vistoria'; badgeTipo.className = 'badge bg-vistoria'; }
-
-    const badgeStatus = document.getElementById('modalStatusBadge');
-    const btnRemover = document.getElementById('btnRemoverTree');
-    
-    if (reg.status === 'removida') {
-        badgeStatus.textContent = 'Inativa / Removida'; badgeStatus.className = 'badge bg-removida';
-        btnRemover.textContent = '✅ Restaurar para Ativa'; btnRemover.className = 'btn btn-success';
-    } else {
-        badgeStatus.textContent = 'Ativa'; badgeStatus.className = 'badge bg-ativa';
-        btnRemover.textContent = '⚠️ Marcar Inativa/Removida'; btnRemover.className = 'btn btn-danger';
-    }
-
-    renderizarListaPodas(reg.podas || []);
-    document.getElementById('manageModal').classList.add('active');
-};
-
-window.fecharModal = () => {
-    document.getElementById('manageModal').classList.remove('active');
-    window.arvoreEditandoId = null;
-};
-
-function renderizarListaPodas(podasArray) {
-    const ul = document.getElementById('modalPodas'); ul.innerHTML = '';
-    if (podasArray.length === 0) { ul.innerHTML = '<li>Nenhum serviço registrado.</li>'; return; }
-    podasArray.forEach(poda => { const li = document.createElement('li'); li.textContent = `Serviço em: ${poda}`; ul.appendChild(li); });
+function calculate(c = readMetricsFromForm()) {
+  const views = +c.views || 0;
+  const reach = +c.reach || 0;
+  const likes = +c.likes || 0;
+  const replies = +c.replies || 0;
+  const shares = +c.shares || 0;
+  const clicks = +c.clicks || 0;
+  const profileVisits = +c.profileVisits || 0;
+  const followers = +c.followers || 0;
+  const spend = +c.spend || 0;
+  const interactions = likes + replies + shares + clicks;
+  return {
+    interactions,
+    engagement: reach ? (interactions / reach) * 100 : 0,
+    ctr: views ? (clicks / views) * 100 : 0,
+    cpc: clicks ? spend / clicks : 0,
+    cpm: views ? (spend / views) * 1000 : 0,
+    frequency: reach ? views / reach : 0,
+    profileRate: reach ? (profileVisits / reach) * 100 : 0,
+    followRate: reach ? (followers / reach) * 100 : 0
+  };
 }
 
-window.registrarPodaHoje = () => {
-    const reg = window.arvoresData[window.arvoreEditandoId];
-    if(!reg.podas) reg.podas = [];
-    reg.podas.push(new Date().toLocaleDateString('pt-BR'));
-    renderizarListaPodas(reg.podas);
-};
+function readMetricsFromForm() {
+  return ['views','reach','likes','replies','shares','clicks','profileVisits','followers','spend']
+    .reduce((obj, id) => ({ ...obj, [id]: +$(id).value || 0 }), {});
+}
 
-window.alternarStatusRemovida = () => {
-    const reg = window.arvoresData[window.arvoreEditandoId];
-    reg.status = reg.status === 'removida' ? 'ativa' : 'removida';
-    
-    const badgeStatus = document.getElementById('modalStatusBadge');
-    const btnRemover = document.getElementById('btnRemoverTree');
-    
-    if (reg.status === 'removida') {
-        badgeStatus.textContent = 'Inativa / Removida'; badgeStatus.className = 'badge bg-removida';
-        btnRemover.textContent = '✅ Restaurar para Ativa'; btnRemover.className = 'btn btn-success';
-    } else {
-        badgeStatus.textContent = 'Ativa'; badgeStatus.className = 'badge bg-ativa';
-        btnRemover.textContent = '⚠️ Marcar Inativa/Removida'; btnRemover.className = 'btn btn-danger';
+function updateCalculator() {
+  const m = calculate();
+  $('calcInteractions').textContent = fmtNumber(m.interactions);
+  $('calcEngagement').textContent = fmtPct(m.engagement);
+  $('calcCtr').textContent = fmtPct(m.ctr);
+  $('calcCpc').textContent = fmtMoney(m.cpc);
+}
+
+document.querySelectorAll('.metric-input').forEach(el => el.addEventListener('input', updateCalculator));
+
+function render() {
+  const list = $('campaignList');
+  list.innerHTML = '';
+  $('emptyState').classList.toggle('hidden', campaigns.length > 0);
+  $('campaignCountLabel').textContent = `${campaigns.length} ${campaigns.length === 1 ? 'campanha' : 'campanhas'}`;
+
+  const totals = campaigns.reduce((acc, c) => {
+    const m = calculate(c);
+    acc.reach += +c.reach || 0;
+    acc.interactions += m.interactions;
+    acc.engagementWeighted += m.interactions;
+    return acc;
+  }, { reach: 0, interactions: 0, engagementWeighted: 0 });
+
+  $('totalCampaigns').textContent = fmtNumber(campaigns.length);
+  $('totalReach').textContent = fmtNumber(totals.reach);
+  $('totalInteractions').textContent = fmtNumber(totals.interactions);
+  $('avgEngagement').textContent = fmtPct(totals.reach ? (totals.engagementWeighted / totals.reach) * 100 : 0);
+
+  [...campaigns].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).forEach(c => {
+    const m = calculate(c);
+    const card = document.createElement('article');
+    card.className = 'campaign-card';
+    card.innerHTML = `
+      <div class="thumb" ${c.image ? `style="background-image:url('${c.image}')"` : ''}>${c.image ? '' : '🖼️'}</div>
+      <div class="campaign-info">
+        <h4>${safe(c.name)}</h4>
+        <p>${formatDate(c.startDate)} — ${formatDate(c.endDate)}</p>
+        <div class="mini-metrics">
+          <span>👁 <b>${fmtNumber(c.views)}</b> visualizações</span>
+          <span>◎ <b>${fmtNumber(c.reach)}</b> alcance</span>
+          <span>↗ <b>${fmtPct(m.engagement)}</b> engajamento</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-ghost btn-small" data-action="view" data-id="${c.id}">Relatório</button>
+        <button class="btn btn-ghost btn-small" data-action="edit" data-id="${c.id}">Editar</button>
+        <button class="btn btn-danger btn-small" data-action="delete" data-id="${c.id}">Excluir</button>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const [y,m,d] = value.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function todayISO() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+
+function openEditor(campaign = null) {
+  editingId = campaign?.id || null;
+  pendingImage = campaign?.image || '';
+  $('editorTitle').textContent = campaign ? 'Editar campanha' : 'Nova campanha';
+  $('campaignName').value = campaign?.name || '';
+  $('startDate').value = campaign?.startDate || todayISO();
+  $('endDate').value = campaign?.endDate || todayISO();
+  ['views','reach','likes','replies','shares','clicks','profileVisits','followers','spend'].forEach(id => {
+    $(id).value = campaign?.[id] ?? 0;
+  });
+  setPreview(pendingImage);
+  updateCalculator();
+  showModal('editorModal');
+}
+
+function setPreview(src) {
+  const img = $('previewImage');
+  const ph = $('previewPlaceholder');
+  if (src) {
+    img.src = src;
+    img.classList.remove('hidden');
+    ph.classList.add('hidden');
+  } else {
+    img.removeAttribute('src');
+    img.classList.add('hidden');
+    ph.classList.remove('hidden');
+  }
+}
+
+async function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const maxW = 900, maxH = 1600;
+        const scale = Math.min(1, maxW / img.width, maxH / img.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', .78));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+$('imageInput').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) return alert('Selecione um arquivo de imagem.');
+  try {
+    pendingImage = await compressImage(file);
+    setPreview(pendingImage);
+  } catch {
+    alert('Não foi possível processar essa imagem. Tente outro arquivo.');
+  }
+});
+
+$('campaignForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const base = {
+    id: editingId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
+    name: $('campaignName').value.trim(),
+    startDate: $('startDate').value,
+    endDate: $('endDate').value,
+    image: pendingImage,
+    ...readMetricsFromForm(),
+    createdAt: editingId ? campaigns.find(c => c.id === editingId)?.createdAt || Date.now() : Date.now(),
+    updatedAt: Date.now()
+  };
+  if (!base.name) return;
+  if (base.endDate < base.startDate) return alert('A data final não pode ser anterior à data inicial.');
+  if (editingId) campaigns = campaigns.map(c => c.id === editingId ? base : c);
+  else campaigns.push(base);
+  persist();
+  hideModal('editorModal');
+  $('campaignForm').reset();
+  $('imageInput').value = '';
+  pendingImage = '';
+  editingId = null;
+  render();
+});
+
+function showModal(id) {
+  const modal = $(id);
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideModal(id) {
+  const modal = $(id);
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => hideModal(btn.dataset.close)));
+document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', e => { if (e.target === modal) hideModal(modal.id); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal:not(.hidden)').forEach(m => hideModal(m.id)); });
+
+$('newCampaignBtn').addEventListener('click', () => openEditor());
+$('emptyNewBtn').addEventListener('click', () => openEditor());
+
+$('campaignList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const c = campaigns.find(x => x.id === btn.dataset.id);
+  if (!c) return;
+  if (btn.dataset.action === 'view') openDetail(c);
+  if (btn.dataset.action === 'edit') openEditor(c);
+  if (btn.dataset.action === 'delete') {
+    if (confirm(`Excluir a campanha “${c.name}”?`)) {
+      campaigns = campaigns.filter(x => x.id !== c.id);
+      persist();
+      render();
     }
-};
+  }
+});
 
-window.salvarAlteracoesTree = async () => {
-    const id = window.arvoreEditandoId;
-    const regModificado = window.arvoresData[id];
-    const novaObs = document.getElementById('modalObs').value;
-    try {
-        await updateDoc(doc(db, "arvores", id), { observacao: novaObs, status: regModificado.status, podas: regModificado.podas });
-        alert('Alterações salvas!'); window.fecharModal();
-    } catch (e) { console.error(e); alert('Erro ao salvar.'); }
-};
+function openDetail(c) {
+  const m = calculate(c);
+  const funnelMax = Math.max(+c.views || 0, +c.reach || 0, m.interactions || 0, +c.clicks || 0, 1);
+  const bar = (label, value) => `
+    <div class="bar-row"><span>${label}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(value/funnelMax)*100)}%"></div></div><div class="bar-value">${fmtNumber(value)}</div></div>`;
+  $('detailContent').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-story" ${c.image ? `style="background-image:url('${c.image}')"` : ''}></div>
+      <div>
+        <div class="detail-title"><h3>${safe(c.name)}</h3><p>Período: ${formatDate(c.startDate)} a ${formatDate(c.endDate)}</p></div>
+        <div class="detail-kpis">
+          <div class="detail-kpi"><span>VISUALIZAÇÕES</span><b>${fmtNumber(c.views)}</b></div>
+          <div class="detail-kpi"><span>ALCANCE</span><b>${fmtNumber(c.reach)}</b></div>
+          <div class="detail-kpi"><span>INTERAÇÕES</span><b>${fmtNumber(m.interactions)}</b></div>
+          <div class="detail-kpi"><span>ENGAJAMENTO</span><b>${fmtPct(m.engagement)}</b></div>
+          <div class="detail-kpi"><span>CTR</span><b>${fmtPct(m.ctr)}</b></div>
+          <div class="detail-kpi"><span>INVESTIMENTO</span><b>${fmtMoney(c.spend)}</b></div>
+          <div class="detail-kpi"><span>CPC</span><b>${fmtMoney(m.cpc)}</b></div>
+          <div class="detail-kpi"><span>CPM</span><b>${fmtMoney(m.cpm)}</b></div>
+          <div class="detail-kpi"><span>FREQUÊNCIA</span><b>${m.frequency.toFixed(2).replace('.', ',')}x</b></div>
+          <div class="detail-kpi"><span>VISITAS AO PERFIL</span><b>${fmtNumber(c.profileVisits)}</b></div>
+          <div class="detail-kpi"><span>NOVOS SEGUIDORES</span><b>${fmtNumber(c.followers)}</b></div>
+          <div class="detail-kpi"><span>CONVERSÃO EM SEGUIDORES</span><b>${fmtPct(m.followRate)}</b></div>
+        </div>
+        <div class="funnel"><h4>Funil de desempenho</h4>${bar('Visualizações', +c.views || 0)}${bar('Alcance', +c.reach || 0)}${bar('Interações', m.interactions)}${bar('Cliques', +c.clicks || 0)}</div>
+        <div class="detail-actions"><button class="btn btn-primary" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn btn-ghost" id="detailEditBtn">Editar campanha</button></div>
+      </div>
+    </div>`;
+  showModal('detailModal');
+  $('detailEditBtn').addEventListener('click', () => { hideModal('detailModal'); openEditor(c); });
+}
 
-window.excluirArvore = async (id, path) => {
-    if(confirm("Deseja apagar DEFINITIVAMENTE este registro?")) {
-        try { await deleteDoc(doc(db, "arvores", id)); if(path) await deleteObject(ref(storage, path)); } 
-        catch(e) { console.error(e); alert("Erro ao excluir."); }
-    }
-};
+$('demoBtn').addEventListener('click', () => {
+  if (campaigns.length && !confirm('Adicionar uma campanha de exemplo sem apagar as suas campanhas?')) return;
+  const demo = {
+    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-demo`,
+    name: 'Story — Semana Acadêmica',
+    startDate: todayISO(), endDate: todayISO(), image: '',
+    views: 6320, reach: 5000, likes: 230, replies: 20, shares: 40, clicks: 150,
+    profileVisits: 82, followers: 23, spend: 100,
+    createdAt: Date.now(), updatedAt: Date.now()
+  };
+  campaigns.push(demo); persist(); render(); openDetail(demo);
+});
 
-// ==========================================
-// SERVICE WORKER PWA
-// ==========================================
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(e => console.log(e)));
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
+
+render();
+updateCalculator();
