@@ -277,7 +277,7 @@ $('demoBtn').addEventListener('click', () => {
   if (campaigns.length && !confirm('Adicionar uma campanha de exemplo sem apagar as suas campanhas?')) return;
   const demo = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-demo`,
-    name: 'Story — Semana Acadêmica',
+    name: 'Story — Campanha Setembro',
     startDate: todayISO(), endDate: todayISO(), image: '',
     views: 6320, reach: 5000, likes: 230, replies: 20, shares: 40, clicks: 150,
     profileVisits: 82, followers: 23, spend: 100,
