@@ -1,7 +1,7 @@
 {
   "name": "Story Ads Lab",
   "short_name": "Story Ads",
-  "description": "Simulador acadêmico de desempenho de Stories e campanhas digitais.",
+  "description": "Painel de desempenho de Stories e campanhas digitais.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
