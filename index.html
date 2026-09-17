@@ -28,11 +28,11 @@
     @page{size:A4 portrait;margin:0}
     @media print{
       html,body{margin:0!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-      .topbar,.hero,.stats-grid,#campaignPanel,.detail-actions,.close{display:none!important}
-      .modal{position:static!important;background:#fff!important;padding:0!important;display:block!important;inset:auto!important}
-      .modal-card{width:100%!important;max-width:none!important;max-height:none!important;overflow:visible!important;border-radius:0!important;box-shadow:none!important}
-      .modal-head{display:none!important}
-      .modal-content{padding:13mm 12mm 11mm!important}
+      .app-shell,#editorModal,.detail-actions,.close{display:none!important}
+      #detailModal{position:static!important;inset:auto!important;display:block!important;background:#fff!important;padding:0!important}
+      #detailModal .modal-card{width:100%!important;max-width:none!important;max-height:none!important;overflow:visible!important;border-radius:0!important;box-shadow:none!important}
+      #detailModal .modal-head{display:none!important}
+      #detailModal .modal-content{padding:13mm 12mm 11mm!important}
       #detailContent::before{content:"Story Ads Lab  •  Relatório de campanha";display:block;margin:0 0 7mm;padding:0 0 4mm;border-bottom:2px solid #7c3aed;color:#4c1d95;font-size:12px;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
       .detail-grid{grid-template-columns:72mm 1fr!important;gap:7mm!important;align-items:start}
       .detail-story{width:72mm!important;border-radius:5mm!important;box-shadow:0 3mm 8mm rgba(15,23,42,.12)!important;break-inside:avoid}
