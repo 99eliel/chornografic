@@ -1,49 +1,27 @@
-const CACHE_NAME = 'v2_eco_app'; // Alterado para v2 para forçar a primeira limpeza
-const assets = [
-  './', 
-  './index.html', 
-  './app.js', 
-  './manifest.json',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-];
+const CACHE_NAME = 'story-ads-lab-v1';
+const ASSETS = ['./', './index.html', './app.js', './manifest.json'];
 
-// Instalação: Baixa os arquivos principais, mas não trava esperando.
-self.addEventListener('install', e => {
-  self.skipWaiting(); // Força o Service Worker a assumir o controle imediatamente
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(assets))
-  );
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+  self.skipWaiting();
 });
 
-// Ativação: Limpa QUALQUER cache antigo que não seja a versão atual (v2)
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(keys
-        .filter(key => key !== CACHE_NAME)
-        .map(key => caches.delete(key))
-      );
-    })
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
   );
-  self.clients.claim(); // Garante que a página atual já use o novo Service Worker
+  self.clients.claim();
 });
 
-// Interceptação das requisições: Estratégia "Network First" (Rede Primeiro)
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    fetch(e.request)
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    fetch(event.request)
       .then(response => {
-        // Se a internet funcionou e baixou o arquivo mais novo, atualizamos o cache
-        const resClone = response.clone();
-        caches.open(CACHE_NAME).then(cache => {
-          cache.put(e.request, resClone);
-        });
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => {
-        // Se a internet caiu ou falhou, tenta buscar o arquivo no cache salvo
-        return caches.match(e.request);
-      })
+      .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
   );
 });
