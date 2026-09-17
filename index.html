@@ -1,234 +1,88 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestão Ambiental - PM</title>
-    
-    <!-- PWA Meta Tags -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2E7D32">
-    <link rel="apple-touch-icon" href="icon-192.png">
-
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-
-    <style>
-        :root {
-            --primary: #2E7D32;
-            --secondary: #4CAF50;
-            --danger: #d32f2f;
-            --warning: #fbc02d;
-            --info: #1976d2;
-            --bg: #f4f7f6;
-            --text: #333;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
-        header { background-color: var(--primary); color: white; padding: 1rem; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; }
-
-        .tabs { display: flex; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .tab-btn { flex: 1; padding: 15px; text-align: center; background: none; border: none; border-bottom: 3px solid transparent; font-weight: bold; font-size: 16px; cursor: pointer; color: #666; }
-        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
-        .tab-content { display: none; flex: 1; padding: 20px; overflow-y: auto; }
-        .tab-content.active { display: block; }
-
-        .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
-        label { font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555;}
-        input[type="text"], input[type="file"], textarea, select { padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; font-family: inherit; }
-        
-        .btn { color: white; border: none; padding: 12px; font-size: 16px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
-        .btn-success { background-color: var(--secondary); }
-        .btn:hover { opacity: 0.9; }
-        .btn-location { background-color: #0277bd; }
-        .btn-danger { background-color: var(--danger); }
-        .btn-warning { background-color: var(--warning); color: #333;}
-        .btn-small { padding: 8px; font-size: 14px; width: auto; margin: 0; }
-        
-        .button-group { display: flex; gap: 10px; }
-
-        #location-status { font-size: 14px; color: var(--danger); font-weight: bold; display: block; margin-bottom: 15px; text-align: center; }
-        .success-text { color: var(--primary) !important; }
-
-        #map { width: 100%; height: 100%; z-index: 1; }
-
-        .marker-arvore { background-color: var(--info); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); width: 20px !important; height: 20px !important; margin-top: -10px; margin-left: -10px; }
-        .marker-vistoria { background-color: var(--warning); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); width: 20px !important; height: 20px !important; margin-top: -10px; margin-left: -10px; }
-
-        /* Banner Offline */
-        #bannerOffline { display: none; background-color: var(--warning); color: #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        .filter-section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .filter-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .filter-row input, .filter-row select { flex: 1; }
-        #resumoFiltro { font-size: 14px; font-weight: bold; color: var(--primary); text-align: center; }
-
-        .tree-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; border-left: 5px solid transparent; }
-        .tree-card.tipo-arvore { border-left-color: var(--info); }
-        .tree-card.tipo-vistoria { border-left-color: var(--warning); }
-        .tree-card img { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; margin-right: 15px; }
-        .tree-info { flex: 1; }
-        .tree-info h3 { margin-bottom: 3px; font-size: 16px; }
-        .tree-info p { margin-bottom: 2px; font-size: 12px; color: #666; }
-        .actions-col { display: flex; flex-direction: column; gap: 5px; }
-        
-        #loader { display: none; text-align: center; padding: 20px; font-weight: bold; color: var(--primary); }
-
-        /* Modal */
-        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-        .modal.active { display: flex; }
-        .modal-content { background-color: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;}
-        .close-btn { font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; border: none; background: none; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; display: inline-block; margin-bottom: 5px; }
-        .bg-ativa { background-color: var(--secondary); }
-        .bg-removida { background-color: var(--danger); }
-        .bg-arvore { background-color: var(--info); }
-        .bg-vistoria { background-color: var(--warning); color: #333; }
-        .podas-list { list-style: none; padding: 0; margin-bottom: 15px; border: 1px solid #eee; border-radius: 4px; max-height: 100px; overflow-y: auto; }
-        .podas-list li { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="Simulador acadêmico de desempenho de Stories e campanhas digitais." />
+  <title>Story Ads Lab</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root{--bg:#f4f6f8;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--accent:#6d28d9;--accent2:#db2777;--good:#059669;--shadow:0 14px 34px rgba(15,23,42,.08)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+    .app-shell{min-height:100vh}.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .topbar-inner{max-width:1280px;margin:auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}.brand{display:flex;align-items:center;gap:11px}.brand-mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#db2777,#f59e0b);display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 8px 22px rgba(109,40,217,.22)}.brand h1{font-size:17px;margin:0}.brand p{font-size:12px;color:var(--muted);margin:2px 0 0}.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:0;border-radius:11px;padding:10px 14px;font-weight:700;transition:.18s}.btn:hover{transform:translateY(-1px)}.btn-primary{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 18px rgba(109,40,217,.2)}.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--text)}.btn-danger{background:#fff1f2;color:#be123c}.btn-small{padding:7px 10px;font-size:12px}
+    main{max-width:1280px;margin:auto;padding:24px 20px 48px}.notice{display:flex;gap:10px;align-items:flex-start;padding:13px 15px;border-radius:13px;background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;font-size:13px;margin-bottom:20px}.notice strong{color:#4c1d95}
+    .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:18px}.hero h2{font-size:28px;line-height:1.1;margin:0 0 7px}.hero p{margin:0;color:var(--muted)}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}.stat .label{font-size:12px;color:var(--muted);font-weight:700}.stat .value{font-size:25px;font-weight:900;margin-top:6px}.stat .sub{font-size:11px;color:var(--muted);margin-top:3px}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.panel-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.panel-head h3{font-size:16px;margin:0}.panel-body{padding:18px}
+    .campaign-list{display:grid;gap:12px}.campaign-card{display:grid;grid-template-columns:74px minmax(0,1fr) auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:12px;background:#fff;transition:.18s}.campaign-card:hover{border-color:#c4b5fd;transform:translateY(-1px)}.thumb{width:74px;height:94px;border-radius:11px;background:#eef2f7 center/cover no-repeat;display:grid;place-items:center;color:#9ca3af;font-size:22px;overflow:hidden}.campaign-info h4{margin:0 0 4px;font-size:15px}.campaign-info p{margin:0;color:var(--muted);font-size:12px}.mini-metrics{display:flex;gap:13px;flex-wrap:wrap;margin-top:9px}.mini-metrics span{font-size:12px;color:#374151}.mini-metrics b{color:#111827}.card-actions{display:flex;gap:6px;align-items:center}
+    .empty{padding:42px 20px;text-align:center;color:var(--muted)}.empty-icon{font-size:40px;margin-bottom:10px}.empty h4{color:var(--text);margin:0 0 6px}.empty p{font-size:13px;margin:0 auto 15px;max-width:440px}
+    .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;padding:18px;z-index:50}.modal-card{width:min(100%,1050px);max-height:94vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 28px 80px rgba(0,0,0,.28)}.modal-head{position:sticky;top:0;background:#fff;z-index:2;padding:16px 19px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0;font-size:17px}.close{border:0;background:#f3f4f6;width:34px;height:34px;border-radius:10px;font-size:20px}.modal-content{padding:18px}
+    .editor-grid{display:grid;grid-template-columns:300px 1fr;gap:20px}.story-preview{aspect-ratio:9/16;background:#111827;border-radius:18px;overflow:hidden;position:relative;box-shadow:0 14px 35px rgba(0,0,0,.18)}.story-preview img{width:100%;height:100%;object-fit:cover;display:block}.preview-placeholder{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#d1d5db;padding:25px;background:radial-gradient(circle at 25% 20%,#4c1d95,transparent 38%),radial-gradient(circle at 70% 80%,#9d174d,transparent 35%),#111827}.preview-placeholder b{display:block;color:white;font-size:17px}.story-top{position:absolute;left:14px;right:14px;top:13px;color:white;text-shadow:0 1px 4px #000;display:flex;align-items:center;gap:8px;font-size:12px}.story-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#f97316,#db2777,#7c3aed);border:2px solid white}.upload{margin-top:10px}.upload input{display:none}.upload label{display:block;text-align:center;border:1px dashed #cbd5e1;border-radius:11px;padding:10px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;background:#f8fafc}
+    .form-section{margin-bottom:20px}.form-section h4{font-size:13px;margin:0 0 10px;color:#374151}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.field label{display:block;font-size:11px;font-weight:800;color:#6b7280;margin:0 0 5px}.field input{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:10px 11px;outline:none;background:#fff}.field input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px #ede9fe}.span-2{grid-column:span 2}.calc-box{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#f8fafc;border:1px solid var(--line);padding:11px;border-radius:13px}.calc-item{padding:8px}.calc-item span{font-size:10px;color:var(--muted);font-weight:800;display:block}.calc-item b{font-size:17px;display:block;margin-top:3px}.form-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:5px}
+    .detail-grid{display:grid;grid-template-columns:300px 1fr;gap:20px}.detail-story{aspect-ratio:9/16;border-radius:18px;background:#111827 center/cover no-repeat;box-shadow:0 14px 35px rgba(0,0,0,.2)}.detail-title h3{font-size:24px;margin:0 0 4px}.detail-title p{margin:0;color:var(--muted);font-size:13px}.detail-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:17px 0}.detail-kpi{border:1px solid var(--line);border-radius:13px;padding:13px}.detail-kpi span{font-size:10px;color:var(--muted);font-weight:800}.detail-kpi b{font-size:20px;display:block;margin-top:4px}.funnel{padding:15px;border:1px solid var(--line);border-radius:14px}.funnel h4{font-size:13px;margin:0 0 12px}.bar-row{display:grid;grid-template-columns:100px 1fr 70px;gap:9px;align-items:center;margin:9px 0;font-size:11px}.bar-track{height:9px;border-radius:999px;background:#ede9fe;overflow:hidden}.bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#db2777)}.bar-value{text-align:right;font-weight:800}.detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.muted{color:var(--muted)}
+    @media(max-width:850px){.stats-grid{grid-template-columns:repeat(2,1fr)}.editor-grid,.detail-grid{grid-template-columns:1fr}.story-preview,.detail-story{width:min(280px,100%);margin:auto}.calc-box{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){.topbar-inner{align-items:flex-start}.brand p{display:none}.hero{align-items:flex-start;flex-direction:column}.stats-grid{grid-template-columns:1fr 1fr}.campaign-card{grid-template-columns:58px 1fr}.thumb{width:58px;height:76px}.card-actions{grid-column:2}.fields{grid-template-columns:1fr}.span-2{grid-column:auto}.detail-kpis{grid-template-columns:repeat(2,1fr)}.modal{padding:0}.modal-card{max-height:100vh;height:100vh;border-radius:0}.hero h2{font-size:24px}}
+    @media print{.topbar,.notice,.hero,.stats-grid,#campaignPanel,.detail-actions,.close{display:none!important}.modal{position:static;background:white;padding:0;display:block}.modal-card{box-shadow:none;max-height:none}.modal-head{display:none}.detail-grid{grid-template-columns:260px 1fr}.detail-story{width:260px}body{background:white}}
+  </style>
 </head>
 <body>
-
-    <header>
-        <h2>Gestão Ambiental</h2>
-    </header>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="openTab('tab-add', this)">Registrar</button>
-        <button class="tab-btn" onclick="openTab('tab-map', this)">Mapa</button>
-        <button class="tab-btn" onclick="openTab('tab-manage', this)">Lista</button>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><div class="brand-mark">S</div><div><h1>Story Ads Lab</h1><p>Simulador acadêmico de campanhas digitais</p></div></div>
+      <div class="top-actions"><button class="btn btn-ghost" id="demoBtn">Preencher exemplo</button><button class="btn btn-primary" id="newCampaignBtn">+ Nova campanha</button></div>
     </div>
+  </header>
+  <main>
+    <div class="notice"><span>ⓘ</span><div><strong>Projeto acadêmico.</strong> Os dados são informados pelo usuário e usados somente para simulação. Este sistema não é afiliado ao Instagram ou à Meta.</div></div>
+    <section class="hero"><div><h2>Painel de desempenho</h2><p>Cadastre Stories, informe as métricas e deixe o sistema calcular os indicadores.</p></div></section>
+    <section class="stats-grid">
+      <article class="stat"><div class="label">Campanhas</div><div class="value" id="totalCampaigns">0</div><div class="sub">salvas neste dispositivo</div></article>
+      <article class="stat"><div class="label">Alcance total</div><div class="value" id="totalReach">0</div><div class="sub">pessoas alcançadas</div></article>
+      <article class="stat"><div class="label">Interações</div><div class="value" id="totalInteractions">0</div><div class="sub">curtidas, respostas, compartilhamentos e cliques</div></article>
+      <article class="stat"><div class="label">Engajamento médio</div><div class="value" id="avgEngagement">0%</div><div class="sub">sobre o alcance das campanhas</div></article>
+    </section>
+    <section class="panel" id="campaignPanel">
+      <div class="panel-head"><h3>Campanhas cadastradas</h3><span class="muted" id="campaignCountLabel">0 campanhas</span></div>
+      <div class="panel-body"><div class="campaign-list" id="campaignList"></div><div class="empty" id="emptyState"><div class="empty-icon">📊</div><h4>Nenhuma campanha ainda</h4><p>Crie uma campanha, envie a imagem do Story e informe os resultados para gerar o painel automaticamente.</p><button class="btn btn-primary" id="emptyNewBtn">Criar primeira campanha</button></div></div>
+    </section>
+  </main>
+</div>
 
-    <!-- Aba Registrar -->
-    <div id="tab-add" class="tab-content active">
-        <form id="treeForm">
-            <div class="form-group">
-                <label for="regTipo">Tipo de Registro:</label>
-                <select id="regTipo" required>
-                    <option value="arvore">🌳 Catálogo de Árvore</option>
-                    <option value="vistoria">📋 Serviço / Vistoria</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="treeName">Título / Espécie:</label>
-                <input type="text" id="treeName" placeholder="Ex: Ipê Roxo ou Poda Emergencial" required>
-            </div>
-
-            <div class="form-group">
-                <label for="regRua">Rua / Avenida:</label>
-                <input type="text" id="regRua" placeholder="Ex: Av. Governador Ivo Borges" required>
-            </div>
-
-            <div class="form-group">
-                <label for="treePhoto">Tirar Foto:</label>
-                <input type="file" id="treePhoto" accept="image/*" capture="environment" required>
-            </div>
-
-            <button type="button" class="btn btn-location" id="getLocationBtn">📍 Obter GPS</button>
-            <span id="location-status">GPS não capturado</span>
-            
-            <input type="hidden" id="latitude">
-            <input type="hidden" id="longitude">
-
-            <div class="button-group">
-                <button type="submit" class="btn btn-success" id="submitBtn">Salvar Online</button>
-                <button type="button" class="btn btn-warning" id="btnSalvarOffline">Salvar Offline</button>
-            </div>
-        </form>
-        <div id="loader">Processando dados...</div>
+<div class="modal hidden" id="editorModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="editorTitle">Nova campanha</h3><button class="close" data-close="editorModal">×</button></div>
+    <div class="modal-content">
+      <form id="campaignForm">
+        <div class="editor-grid">
+          <div>
+            <div class="story-preview"><img id="previewImage" class="hidden" alt="Prévia do Story"><div class="preview-placeholder" id="previewPlaceholder"><div><div style="font-size:34px">🖼️</div><b>Prévia do Story</b><small>Envie uma imagem abaixo</small></div></div><div class="story-top"><div class="story-avatar"></div><b>campanha</b><span>Patrocinado</span></div></div>
+            <div class="upload"><input type="file" id="imageInput" accept="image/*"><label for="imageInput">Selecionar imagem do Story</label></div>
+          </div>
+          <div>
+            <div class="form-section"><h4>Identificação</h4><div class="fields"><div class="field span-2"><label>Nome da campanha</label><input id="campaignName" required placeholder="Ex.: Story — Semana Acadêmica"></div><div class="field"><label>Data inicial</label><input id="startDate" type="date" required></div><div class="field"><label>Data final</label><input id="endDate" type="date" required></div></div></div>
+            <div class="form-section"><h4>Entrega</h4><div class="fields"><div class="field"><label>Visualizações / impressões</label><input class="metric-input" id="views" type="number" min="0" value="0"></div><div class="field"><label>Alcance (pessoas)</label><input class="metric-input" id="reach" type="number" min="0" value="0"></div></div></div>
+            <div class="form-section"><h4>Interações</h4><div class="fields"><div class="field"><label>Curtidas</label><input class="metric-input" id="likes" type="number" min="0" value="0"></div><div class="field"><label>Respostas</label><input class="metric-input" id="replies" type="number" min="0" value="0"></div><div class="field"><label>Compartilhamentos</label><input class="metric-input" id="shares" type="number" min="0" value="0"></div><div class="field"><label>Cliques no link</label><input class="metric-input" id="clicks" type="number" min="0" value="0"></div><div class="field"><label>Visitas ao perfil</label><input class="metric-input" id="profileVisits" type="number" min="0" value="0"></div><div class="field"><label>Novos seguidores</label><input class="metric-input" id="followers" type="number" min="0" value="0"></div></div></div>
+            <div class="form-section"><h4>Investimento</h4><div class="fields"><div class="field span-2"><label>Valor investido (R$)</label><input class="metric-input" id="spend" type="number" min="0" step="0.01" value="0"></div></div></div>
+            <div class="calc-box"><div class="calc-item"><span>INTERAÇÕES</span><b id="calcInteractions">0</b></div><div class="calc-item"><span>ENGAJAMENTO</span><b id="calcEngagement">0%</b></div><div class="calc-item"><span>CTR</span><b id="calcCtr">0%</b></div><div class="calc-item"><span>CPC</span><b id="calcCpc">R$ 0,00</b></div></div>
+            <div class="form-actions"><button type="button" class="btn btn-ghost" data-close="editorModal">Cancelar</button><button type="submit" class="btn btn-primary">Salvar campanha</button></div>
+          </div>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
 
-    <!-- Aba Mapa -->
-    <div id="tab-map" class="tab-content" style="padding: 0;">
-        <div id="map"></div>
-        <div style="position: absolute; bottom: 10px; left: 10px; z-index: 999; background: white; padding: 5px 10px; border-radius: 4px; box-shadow: 0 0 5px rgba(0,0,0,0.3); font-size: 12px;">
-            <span style="color: var(--info); font-weight: bold;">🔵 Árvores</span> | 
-            <span style="color: var(--warning); font-weight: bold;">🟡 Vistorias</span>
-        </div>
-    </div>
-
-    <!-- Aba Lista (Gerenciar) -->
-    <div id="tab-manage" class="tab-content">
-        
-        <!-- Alerta de Registros Offline -->
-        <div id="bannerOffline">
-            <p id="textoOffline">Você tem X registros salvos offline.</p>
-            <button class="btn btn-success btn-small" onclick="sincronizarOffline()" style="margin-top: 10px; width: 100%;">🔄 Sincronizar Agora</button>
-        </div>
-
-        <div class="filter-section">
-            <div class="filter-row">
-                <select id="filtroTipo">
-                    <option value="todos">Todos os Tipos</option>
-                    <option value="arvore">Apenas Árvores</option>
-                    <option value="vistoria">Apenas Vistorias</option>
-                </select>
-            </div>
-            <div class="filter-row">
-                <input type="text" id="filtroRua" placeholder="Buscar por Rua ou Avenida...">
-            </div>
-            <div id="resumoFiltro">Carregando dados...</div>
-        </div>
-
-        <div id="treeList">
-            <p style="text-align:center;">Buscando registros...</p>
-        </div>
-    </div>
-
-    <!-- MODAL DE GERENCIAMENTO -->
-    <div id="manageModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <span id="modalTipoBadge" class="badge bg-arvore">Árvore</span>
-                    <h3 id="modalNome" style="margin: 0;">Título do Registro</h3>
-                    <p id="modalRua" style="margin: 2px 0 5px 0; font-size: 13px; color: #666;"></p>
-                    <span id="modalStatusBadge" class="badge bg-ativa">Ativa</span>
-                </div>
-                <button class="close-btn" onclick="fecharModal()">&times;</button>
-            </div>
-            
-            <div class="form-group">
-                <label>Observações do Fiscal/Gestor:</label>
-                <textarea id="modalObs" rows="3" placeholder="Insira detalhes da vistoria ou manejo..."></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Histórico de Podas / Serviços:</label>
-                <ul id="modalPodas" class="podas-list"></ul>
-                <button class="btn btn-warning" onclick="registrarPodaHoje()">➕ Registrar Serviço Hoje</button>
-            </div>
-
-            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ccc;">
-
-            <button class="btn btn-success" onclick="salvarAlteracoesTree()">💾 Salvar Alterações</button>
-            <button id="btnRemoverTree" class="btn btn-danger" onclick="alternarStatusRemovida()">⚠️ Marcar como Inativo/Removida</button>
-        </div>
-    </div>
-
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    
-    <script>
-        function openTab(tabId, element) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
-            document.getElementById(tabId).classList.add('active');
-            element.classList.add('active');
-
-            if(tabId === 'tab-map' && window.mapInstance) {
-                setTimeout(() => window.mapInstance.invalidateSize(), 150);
-            }
-        }
-    </script>
-
-    <script type="module" src="app.js"></script>
-
+<div class="modal hidden" id="detailModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head"><h3>Relatório da campanha</h3><button class="close" data-close="detailModal">×</button></div>
+    <div class="modal-content" id="detailContent"></div>
+  </div>
+</div>
+<script src="app.js"></script>
 </body>
 </html>
