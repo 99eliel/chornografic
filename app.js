@@ -241,14 +241,35 @@ $('campaignList').addEventListener('click', (e) => {
   }
 });
 
+function printReport() {
+  const appShell = document.querySelector('.app-shell');
+  const previousDisplay = appShell.style.display;
+  appShell.style.display = 'none';
+
+  const restore = () => {
+    appShell.style.display = previousDisplay;
+    window.removeEventListener('afterprint', restore);
+  };
+
+  window.addEventListener('afterprint', restore);
+  requestAnimationFrame(() => {
+    window.print();
+    setTimeout(restore, 100);
+  });
+}
+
 function openDetail(c) {
   const m = calculate(c);
   const funnelMax = Math.max(+c.views || 0, +c.reach || 0, m.interactions || 0, +c.clicks || 0, 1);
   const bar = (label, value) => `
     <div class="bar-row"><span>${label}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(value/funnelMax)*100)}%"></div></div><div class="bar-value">${fmtNumber(value)}</div></div>`;
+  const storyMedia = c.image
+    ? `<img src="${c.image}" alt="Criativo da campanha ${safe(c.name)}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:18px;">`
+    : `<div style="width:100%;height:100%;display:grid;place-items:center;color:#9ca3af;background:#f3f4f6;border-radius:18px;">Sem imagem</div>`;
+
   $('detailContent').innerHTML = `
     <div class="detail-grid">
-      <div class="detail-story" ${c.image ? `style="background-image:url('${c.image}')"` : ''}></div>
+      <div class="detail-story" style="overflow:hidden;background:#f3f4f6;">${storyMedia}</div>
       <div>
         <div class="detail-title"><h3>${safe(c.name)}</h3><p>Período: ${formatDate(c.startDate)} a ${formatDate(c.endDate)}</p></div>
         <div class="detail-kpis">
@@ -266,10 +287,11 @@ function openDetail(c) {
           <div class="detail-kpi"><span>CONVERSÃO EM SEGUIDORES</span><b>${fmtPct(m.followRate)}</b></div>
         </div>
         <div class="funnel"><h4>Funil de desempenho</h4>${bar('Visualizações', +c.views || 0)}${bar('Alcance', +c.reach || 0)}${bar('Interações', m.interactions)}${bar('Cliques', +c.clicks || 0)}</div>
-        <div class="detail-actions"><button class="btn btn-primary" onclick="window.print()">Imprimir / Salvar PDF</button><button class="btn btn-ghost" id="detailEditBtn">Editar campanha</button></div>
+        <div class="detail-actions"><button class="btn btn-primary" id="printReportBtn">Imprimir / Salvar PDF</button><button class="btn btn-ghost" id="detailEditBtn">Editar campanha</button></div>
       </div>
     </div>`;
   showModal('detailModal');
+  $('printReportBtn').addEventListener('click', printReport);
   $('detailEditBtn').addEventListener('click', () => { hideModal('detailModal'); openEditor(c); });
 }
 
