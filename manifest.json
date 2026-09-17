@@ -1,16 +1,11 @@
 {
-  "name": "Secretaria de Meio Ambiente - Árvores",
-  "short_name": "EcoPontalina",
-  "description": "Sistema de mapeamento de árvores",
-  "start_url": "index.html",
+  "name": "Story Ads Lab",
+  "short_name": "Story Ads",
+  "description": "Simulador acadêmico de desempenho de Stories e campanhas digitais.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2E7D32",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#f4f6f8",
+  "theme_color": "#111827",
+  "lang": "pt-BR"
 }
