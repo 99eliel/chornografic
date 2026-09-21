@@ -358,6 +358,16 @@ function openDetail(c, readOnly = false) {
     ? `<img src="${c.imageUrl}" alt="Criativo da campanha ${safe(c.name)}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:18px;">`
     : `<div style="width:100%;height:100%;display:grid;place-items:center;color:#9ca3af;background:#f3f4f6;border-radius:18px;">Sem imagem</div>`;
 
+  const projectionNote = readOnly
+    ? ""
+    : `<div class="projection-note">Projeção automática • +5% a cada 4 horas • ${projected.projectionBlocks} ciclo(s) decorridos</div>`;
+  const viewsLabel = readOnly ? "VISUALIZAÇÕES" : "VISUALIZAÇÕES PROJETADAS";
+  const reachLabel = readOnly ? "ALCANCE" : "ALCANCE PROJETADO";
+  const funnelTitle = readOnly ? "Funil de desempenho" : "Funil de desempenho projetado";
+  const sharedDisclosure = readOnly
+    ? `<div class="projection-disclosure">Valores atualizados por projeção automática.</div>`
+    : "";
+
   const actions = readOnly ? "" : `
     <div class="detail-actions">
       <button class="btn btn-primary" id="printReportBtn">Imprimir / Salvar PDF</button>
@@ -372,11 +382,11 @@ function openDetail(c, readOnly = false) {
         <div class="detail-title">
           <h3>${safe(c.name)}</h3>
           <p>Período: ${formatDate(c.startDate)} a ${formatDate(c.endDate)}</p>
-          <div class="projection-note">Projeção automática • +5% a cada 4 horas • ${projected.projectionBlocks} ciclo(s) decorridos</div>
+          ${projectionNote}
         </div>
         <div class="detail-kpis">
-          <div class="detail-kpi"><span>VISUALIZAÇÕES PROJETADAS</span><b>${fmtNumber(projected.views)}</b></div>
-          <div class="detail-kpi"><span>ALCANCE PROJETADO</span><b>${fmtNumber(projected.reach)}</b></div>
+          <div class="detail-kpi"><span>${viewsLabel}</span><b>${fmtNumber(projected.views)}</b></div>
+          <div class="detail-kpi"><span>${reachLabel}</span><b>${fmtNumber(projected.reach)}</b></div>
           <div class="detail-kpi"><span>INTERAÇÕES</span><b>${fmtNumber(m.interactions)}</b></div>
           <div class="detail-kpi"><span>ENGAJAMENTO</span><b>${fmtPct(m.engagement)}</b></div>
           <div class="detail-kpi"><span>CTR</span><b>${fmtPct(m.ctr)}</b></div>
@@ -388,7 +398,8 @@ function openDetail(c, readOnly = false) {
           <div class="detail-kpi"><span>NOVOS SEGUIDORES</span><b>${fmtNumber(projected.followers)}</b></div>
           <div class="detail-kpi"><span>CONVERSÃO EM SEGUIDORES</span><b>${fmtPct(m.followRate)}</b></div>
         </div>
-        <div class="funnel"><h4>Funil de desempenho projetado</h4>${bar("Visualizações", +projected.views || 0)}${bar("Alcance", +projected.reach || 0)}${bar("Interações", m.interactions)}${bar("Cliques", +projected.clicks || 0)}</div>
+        <div class="funnel"><h4>${funnelTitle}</h4>${bar("Visualizações", +projected.views || 0)}${bar("Alcance", +projected.reach || 0)}${bar("Interações", m.interactions)}${bar("Cliques", +projected.clicks || 0)}</div>
+        ${sharedDisclosure}
         ${actions}
       </div>
     </div>`;
