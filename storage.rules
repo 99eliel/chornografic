@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /campaign-images/{uid}/{fileName} {
+      // As imagens podem aparecer nos relatórios compartilhados.
+      allow read: if true;
+
+      // Somente o navegador autenticado que criou a campanha pode gravar.
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
