@@ -16,6 +16,10 @@ const storage = getStorage(firebaseApp);
 
 const LEGACY_STORAGE_KEY = "storyAdsLab.campaigns.v1";
 const MIGRATION_KEY = "storyAdsLab.firebaseMigration.v1";
+const PROJECTION_RATE = 0.05;
+const PROJECTION_INTERVAL_HOURS = 4;
+const PROJECTION_INTERVAL_MS = PROJECTION_INTERVAL_HOURS * 60 * 60 * 1000;
+const PROJECTED_METRICS = ["views","reach","likes","replies","shares","clicks","profileVisits","followers"];
 const $ = (id) => document.getElementById(id);
 const fmtNumber = (n) => new Intl.NumberFormat("pt-BR").format(Number(n) || 0);
 const fmtMoney = (n) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(n) || 0);
@@ -29,6 +33,28 @@ let pendingImageBlob = null;
 let pendingImagePreview = "";
 let originalCampaign = null;
 const sharedIdFromUrl = new URLSearchParams(location.search).get("campanha");
+
+function projectionBlocks(c, now = Date.now()) {
+  if (c?.projectionEnabled === false) return 0;
+  const startedAt = Number(c?.projectionStartedAt || c?.createdAt || now);
+  if (!Number.isFinite(startedAt) || startedAt <= 0 || now <= startedAt) return 0;
+  return Math.max(0, Math.floor((now - startedAt) / PROJECTION_INTERVAL_MS));
+}
+
+function projectCampaign(c, now = Date.now()) {
+  const blocks = projectionBlocks(c, now);
+  const configuredRate = Number(c?.projectionRate);
+  const rate = Number.isFinite(configuredRate) ? configuredRate / 100 : PROJECTION_RATE;
+  const factor = Math.pow(1 + rate, blocks);
+  const projected = { ...c, projectionBlocks: blocks, projectionFactor: factor };
+
+  PROJECTED_METRICS.forEach(key => {
+    const base = Number(c?.[key]) || 0;
+    projected[key] = Math.round(base * factor);
+  });
+
+  return projected;
+}
 
 function calculate(c = readMetricsFromForm()) {
   const views = +c.views || 0;
@@ -91,8 +117,9 @@ function render() {
   $("campaignCountLabel").textContent = `${campaigns.length} ${campaigns.length === 1 ? "campanha" : "campanhas"} • online`;
 
   const totals = campaigns.reduce((acc, c) => {
-    const m = calculate(c);
-    acc.reach += +c.reach || 0;
+    const projected = projectCampaign(c);
+    const m = calculate(projected);
+    acc.reach += +projected.reach || 0;
     acc.interactions += m.interactions;
     return acc;
   }, { reach: 0, interactions: 0 });
@@ -103,7 +130,8 @@ function render() {
   $("avgEngagement").textContent = fmtPct(totals.reach ? (totals.interactions / totals.reach) * 100 : 0);
 
   [...campaigns].sort((a,b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0)).forEach(c => {
-    const m = calculate(c);
+    const projected = projectCampaign(c);
+    const m = calculate(projected);
     const image = c.imageUrl || "";
     const card = document.createElement("article");
     card.className = "campaign-card";
@@ -113,9 +141,10 @@ function render() {
         <h4>${safe(c.name)}</h4>
         <p>${formatDate(c.startDate)} — ${formatDate(c.endDate)}</p>
         <div class="mini-metrics">
-          <span>👁 <b>${fmtNumber(c.views)}</b> visualizações</span>
-          <span>◎ <b>${fmtNumber(c.reach)}</b> alcance</span>
+          <span>👁 <b>${fmtNumber(projected.views)}</b> visualizações</span>
+          <span>◎ <b>${fmtNumber(projected.reach)}</b> alcance</span>
           <span>↗ <b>${fmtPct(m.engagement)}</b> engajamento</span>
+          <span>⏱ <b>+5%</b> a cada 4h</span>
         </div>
       </div>
       <div class="card-actions">
@@ -215,6 +244,10 @@ function publicSnapshot(campaign) {
     followers: +campaign.followers || 0,
     spend: +campaign.spend || 0,
     imageUrl: campaign.imageUrl || "",
+    projectionEnabled: campaign.projectionEnabled !== false,
+    projectionRate: Number(campaign.projectionRate) || 5,
+    projectionIntervalHours: Number(campaign.projectionIntervalHours) || 4,
+    projectionStartedAt: Number(campaign.projectionStartedAt) || Number(campaign.createdAt) || Date.now(),
     updatedAt: Date.now()
   };
 }
@@ -249,6 +282,10 @@ async function saveCampaign(e) {
       imagePath,
       shareId: originalCampaign?.shareId || "",
       ...readMetricsFromForm(),
+      projectionEnabled: true,
+      projectionRate: 5,
+      projectionIntervalHours: 4,
+      projectionStartedAt: originalCampaign?.projectionStartedAt || now,
       createdAt: originalCampaign?.createdAt || now,
       updatedAt: now
     };
@@ -312,8 +349,9 @@ function printReport() {
 }
 
 function openDetail(c, readOnly = false) {
-  const m = calculate(c);
-  const funnelMax = Math.max(+c.views || 0, +c.reach || 0, m.interactions || 0, +c.clicks || 0, 1);
+  const projected = projectCampaign(c);
+  const m = calculate(projected);
+  const funnelMax = Math.max(+projected.views || 0, +projected.reach || 0, m.interactions || 0, +projected.clicks || 0, 1);
   const bar = (label, value) => `
     <div class="bar-row"><span>${label}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(value/funnelMax)*100)}%"></div></div><div class="bar-value">${fmtNumber(value)}</div></div>`;
   const storyMedia = c.imageUrl
@@ -331,10 +369,14 @@ function openDetail(c, readOnly = false) {
     <div class="detail-grid">
       <div class="detail-story" style="overflow:hidden;background:#f3f4f6;">${storyMedia}</div>
       <div>
-        <div class="detail-title"><h3>${safe(c.name)}</h3><p>Período: ${formatDate(c.startDate)} a ${formatDate(c.endDate)}</p></div>
+        <div class="detail-title">
+          <h3>${safe(c.name)}</h3>
+          <p>Período: ${formatDate(c.startDate)} a ${formatDate(c.endDate)}</p>
+          <div class="projection-note">Projeção automática • +5% a cada 4 horas • ${projected.projectionBlocks} ciclo(s) decorridos</div>
+        </div>
         <div class="detail-kpis">
-          <div class="detail-kpi"><span>VISUALIZAÇÕES</span><b>${fmtNumber(c.views)}</b></div>
-          <div class="detail-kpi"><span>ALCANCE</span><b>${fmtNumber(c.reach)}</b></div>
+          <div class="detail-kpi"><span>VISUALIZAÇÕES PROJETADAS</span><b>${fmtNumber(projected.views)}</b></div>
+          <div class="detail-kpi"><span>ALCANCE PROJETADO</span><b>${fmtNumber(projected.reach)}</b></div>
           <div class="detail-kpi"><span>INTERAÇÕES</span><b>${fmtNumber(m.interactions)}</b></div>
           <div class="detail-kpi"><span>ENGAJAMENTO</span><b>${fmtPct(m.engagement)}</b></div>
           <div class="detail-kpi"><span>CTR</span><b>${fmtPct(m.ctr)}</b></div>
@@ -342,11 +384,11 @@ function openDetail(c, readOnly = false) {
           <div class="detail-kpi"><span>CPC</span><b>${fmtMoney(m.cpc)}</b></div>
           <div class="detail-kpi"><span>CPM</span><b>${fmtMoney(m.cpm)}</b></div>
           <div class="detail-kpi"><span>FREQUÊNCIA</span><b>${m.frequency.toFixed(2).replace(".", ",")}x</b></div>
-          <div class="detail-kpi"><span>VISITAS AO PERFIL</span><b>${fmtNumber(c.profileVisits)}</b></div>
-          <div class="detail-kpi"><span>NOVOS SEGUIDORES</span><b>${fmtNumber(c.followers)}</b></div>
+          <div class="detail-kpi"><span>VISITAS AO PERFIL</span><b>${fmtNumber(projected.profileVisits)}</b></div>
+          <div class="detail-kpi"><span>NOVOS SEGUIDORES</span><b>${fmtNumber(projected.followers)}</b></div>
           <div class="detail-kpi"><span>CONVERSÃO EM SEGUIDORES</span><b>${fmtPct(m.followRate)}</b></div>
         </div>
-        <div class="funnel"><h4>Funil de desempenho</h4>${bar("Visualizações", +c.views || 0)}${bar("Alcance", +c.reach || 0)}${bar("Interações", m.interactions)}${bar("Cliques", +c.clicks || 0)}</div>
+        <div class="funnel"><h4>Funil de desempenho projetado</h4>${bar("Visualizações", +projected.views || 0)}${bar("Alcance", +projected.reach || 0)}${bar("Interações", m.interactions)}${bar("Cliques", +projected.clicks || 0)}</div>
         ${actions}
       </div>
     </div>`;
@@ -444,6 +486,10 @@ async function migrateLegacyData() {
       imageUrl,
       imagePath,
       shareId: "",
+      projectionEnabled: true,
+      projectionRate: 5,
+      projectionIntervalHours: 4,
+      projectionStartedAt: now,
       createdAt: item.createdAt || now,
       updatedAt: item.updatedAt || now
     };
