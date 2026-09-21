@@ -1,27 +1,34 @@
-const STORAGE_KEY = 'storyAdsLab.campaigns.v1';
-let campaigns = loadCampaigns();
-let editingId = null;
-let pendingImage = '';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, getDoc, getDocs, query, where,
+  setDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
+import { firebaseConfig } from "./firebase-config.js";
 
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
+
+const LEGACY_STORAGE_KEY = "storyAdsLab.campaigns.v1";
+const MIGRATION_KEY = "storyAdsLab.firebaseMigration.v1";
 const $ = (id) => document.getElementById(id);
-const fmtNumber = (n) => new Intl.NumberFormat('pt-BR').format(Number(n) || 0);
-const fmtMoney = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n) || 0);
-const fmtPct = (n) => `${(Number(n) || 0).toFixed(2).replace('.', ',')}%`;
-const safe = (value) => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const fmtNumber = (n) => new Intl.NumberFormat("pt-BR").format(Number(n) || 0);
+const fmtMoney = (n) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(n) || 0);
+const fmtPct = (n) => `${(Number(n) || 0).toFixed(2).replace(".", ",")}%`;
+const safe = (value) => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 
-function loadCampaigns() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-  catch { return []; }
-}
-
-function persist() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
-  } catch (err) {
-    alert('O navegador ficou sem espaço para salvar. Tente usar uma imagem menor ou excluir campanhas antigas.');
-    throw err;
-  }
-}
+let currentUser = null;
+let campaigns = [];
+let editingId = null;
+let pendingImageBlob = null;
+let pendingImagePreview = "";
+let originalCampaign = null;
+const sharedIdFromUrl = new URLSearchParams(location.search).get("campanha");
 
 function calculate(c = readMetricsFromForm()) {
   const views = +c.views || 0;
@@ -47,45 +54,61 @@ function calculate(c = readMetricsFromForm()) {
 }
 
 function readMetricsFromForm() {
-  return ['views','reach','likes','replies','shares','clicks','profileVisits','followers','spend']
+  return ["views","reach","likes","replies","shares","clicks","profileVisits","followers","spend"]
     .reduce((obj, id) => ({ ...obj, [id]: +$(id).value || 0 }), {});
 }
 
 function updateCalculator() {
   const m = calculate();
-  $('calcInteractions').textContent = fmtNumber(m.interactions);
-  $('calcEngagement').textContent = fmtPct(m.engagement);
-  $('calcCtr').textContent = fmtPct(m.ctr);
-  $('calcCpc').textContent = fmtMoney(m.cpc);
+  $("calcInteractions").textContent = fmtNumber(m.interactions);
+  $("calcEngagement").textContent = fmtPct(m.engagement);
+  $("calcCtr").textContent = fmtPct(m.ctr);
+  $("calcCpc").textContent = fmtMoney(m.cpc);
 }
 
-document.querySelectorAll('.metric-input').forEach(el => el.addEventListener('input', updateCalculator));
+function formatDate(value) {
+  if (!value) return "—";
+  const [y,m,d] = value.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function todayISO() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function setInteractive(enabled) {
+  ["newCampaignBtn","emptyNewBtn","demoBtn"].forEach(id => {
+    if ($(id)) $(id).disabled = !enabled;
+  });
+}
 
 function render() {
-  const list = $('campaignList');
-  list.innerHTML = '';
-  $('emptyState').classList.toggle('hidden', campaigns.length > 0);
-  $('campaignCountLabel').textContent = `${campaigns.length} ${campaigns.length === 1 ? 'campanha' : 'campanhas'}`;
+  const list = $("campaignList");
+  list.innerHTML = "";
+  $("emptyState").classList.toggle("hidden", campaigns.length > 0);
+  $("campaignCountLabel").textContent = `${campaigns.length} ${campaigns.length === 1 ? "campanha" : "campanhas"} • online`;
 
   const totals = campaigns.reduce((acc, c) => {
     const m = calculate(c);
     acc.reach += +c.reach || 0;
     acc.interactions += m.interactions;
-    acc.engagementWeighted += m.interactions;
     return acc;
-  }, { reach: 0, interactions: 0, engagementWeighted: 0 });
+  }, { reach: 0, interactions: 0 });
 
-  $('totalCampaigns').textContent = fmtNumber(campaigns.length);
-  $('totalReach').textContent = fmtNumber(totals.reach);
-  $('totalInteractions').textContent = fmtNumber(totals.interactions);
-  $('avgEngagement').textContent = fmtPct(totals.reach ? (totals.engagementWeighted / totals.reach) * 100 : 0);
+  $("totalCampaigns").textContent = fmtNumber(campaigns.length);
+  $("totalReach").textContent = fmtNumber(totals.reach);
+  $("totalInteractions").textContent = fmtNumber(totals.interactions);
+  $("avgEngagement").textContent = fmtPct(totals.reach ? (totals.interactions / totals.reach) * 100 : 0);
 
-  [...campaigns].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).forEach(c => {
+  [...campaigns].sort((a,b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0)).forEach(c => {
     const m = calculate(c);
-    const card = document.createElement('article');
-    card.className = 'campaign-card';
+    const image = c.imageUrl || "";
+    const card = document.createElement("article");
+    card.className = "campaign-card";
     card.innerHTML = `
-      <div class="thumb" ${c.image ? `style="background-image:url('${c.image}')"` : ''}>${c.image ? '' : '🖼️'}</div>
+      <div class="thumb" ${image ? `style="background-image:url('${image}')"` : ""}>${image ? "" : "🖼️"}</div>
       <div class="campaign-info">
         <h4>${safe(c.name)}</h4>
         <p>${formatDate(c.startDate)} — ${formatDate(c.endDate)}</p>
@@ -97,6 +120,7 @@ function render() {
       </div>
       <div class="card-actions">
         <button class="btn btn-ghost btn-small" data-action="view" data-id="${c.id}">Relatório</button>
+        <button class="btn btn-ghost btn-small" data-action="share" data-id="${c.id}">Compartilhar</button>
         <button class="btn btn-ghost btn-small" data-action="edit" data-id="${c.id}">Editar</button>
         <button class="btn btn-danger btn-small" data-action="delete" data-id="${c.id}">Excluir</button>
       </div>`;
@@ -104,44 +128,41 @@ function render() {
   });
 }
 
-function formatDate(value) {
-  if (!value) return '—';
-  const [y,m,d] = value.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function todayISO() {
-  const d = new Date();
-  const local = new Date(d.getTime() - d.getTimezoneOffset()*60000);
-  return local.toISOString().slice(0,10);
+async function loadCampaigns() {
+  const q = query(collection(db, "campaigns"), where("ownerUid", "==", currentUser.uid));
+  const snap = await getDocs(q);
+  campaigns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
 }
 
 function openEditor(campaign = null) {
   editingId = campaign?.id || null;
-  pendingImage = campaign?.image || '';
-  $('editorTitle').textContent = campaign ? 'Editar campanha' : 'Nova campanha';
-  $('campaignName').value = campaign?.name || '';
-  $('startDate').value = campaign?.startDate || todayISO();
-  $('endDate').value = campaign?.endDate || todayISO();
-  ['views','reach','likes','replies','shares','clicks','profileVisits','followers','spend'].forEach(id => {
+  originalCampaign = campaign || null;
+  pendingImageBlob = null;
+  pendingImagePreview = campaign?.imageUrl || "";
+  $("editorTitle").textContent = campaign ? "Editar campanha" : "Nova campanha";
+  $("campaignName").value = campaign?.name || "";
+  $("startDate").value = campaign?.startDate || todayISO();
+  $("endDate").value = campaign?.endDate || todayISO();
+  ["views","reach","likes","replies","shares","clicks","profileVisits","followers","spend"].forEach(id => {
     $(id).value = campaign?.[id] ?? 0;
   });
-  setPreview(pendingImage);
+  setPreview(pendingImagePreview);
   updateCalculator();
-  showModal('editorModal');
+  showModal("editorModal");
 }
 
 function setPreview(src) {
-  const img = $('previewImage');
-  const ph = $('previewPlaceholder');
+  const img = $("previewImage");
+  const ph = $("previewPlaceholder");
   if (src) {
     img.src = src;
-    img.classList.remove('hidden');
-    ph.classList.add('hidden');
+    img.classList.remove("hidden");
+    ph.classList.add("hidden");
   } else {
-    img.removeAttribute('src');
-    img.classList.add('hidden');
-    ph.classList.remove('hidden');
+    img.removeAttribute("src");
+    img.classList.add("hidden");
+    ph.classList.remove("hidden");
   }
 }
 
@@ -155,11 +176,14 @@ async function compressImage(file) {
       img.onload = () => {
         const maxW = 900, maxH = 1600;
         const scale = Math.min(1, maxW / img.width, maxH / img.height);
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', .78));
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          if (!blob) return reject(new Error("Falha ao processar imagem"));
+          resolve({ blob, preview: canvas.toDataURL("image/jpeg", .82) });
+        }, "image/jpeg", .82);
       };
       img.src = reader.result;
     };
@@ -167,107 +191,143 @@ async function compressImage(file) {
   });
 }
 
-$('imageInput').addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) return alert('Selecione um arquivo de imagem.');
-  try {
-    pendingImage = await compressImage(file);
-    setPreview(pendingImage);
-  } catch {
-    alert('Não foi possível processar essa imagem. Tente outro arquivo.');
-  }
-});
+async function uploadCampaignImage(campaignId, blob) {
+  const path = `campaign-images/${currentUser.uid}/${campaignId}.jpg`;
+  const imageRef = ref(storage, path);
+  await uploadBytes(imageRef, blob, { contentType: "image/jpeg" });
+  return { imageUrl: await getDownloadURL(imageRef), imagePath: path };
+}
 
-$('campaignForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const base = {
-    id: editingId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
-    name: $('campaignName').value.trim(),
-    startDate: $('startDate').value,
-    endDate: $('endDate').value,
-    image: pendingImage,
-    ...readMetricsFromForm(),
-    createdAt: editingId ? campaigns.find(c => c.id === editingId)?.createdAt || Date.now() : Date.now(),
+function publicSnapshot(campaign) {
+  return {
+    ownerUid: campaign.ownerUid,
+    sourceCampaignId: campaign.id,
+    name: campaign.name,
+    startDate: campaign.startDate,
+    endDate: campaign.endDate,
+    views: +campaign.views || 0,
+    reach: +campaign.reach || 0,
+    likes: +campaign.likes || 0,
+    replies: +campaign.replies || 0,
+    shares: +campaign.shares || 0,
+    clicks: +campaign.clicks || 0,
+    profileVisits: +campaign.profileVisits || 0,
+    followers: +campaign.followers || 0,
+    spend: +campaign.spend || 0,
+    imageUrl: campaign.imageUrl || "",
     updatedAt: Date.now()
   };
-  if (!base.name) return;
-  if (base.endDate < base.startDate) return alert('A data final não pode ser anterior à data inicial.');
-  if (editingId) campaigns = campaigns.map(c => c.id === editingId ? base : c);
-  else campaigns.push(base);
-  persist();
-  hideModal('editorModal');
-  $('campaignForm').reset();
-  $('imageInput').value = '';
-  pendingImage = '';
-  editingId = null;
-  render();
-});
+}
+
+async function saveCampaign(e) {
+  e.preventDefault();
+  if (!currentUser) return alert("O Firebase ainda está conectando.");
+
+  const submitBtn = $("campaignForm").querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Salvando...";
+
+  try {
+    const id = editingId || crypto.randomUUID();
+    let imageUrl = originalCampaign?.imageUrl || "";
+    let imagePath = originalCampaign?.imagePath || "";
+
+    if (pendingImageBlob) {
+      const uploaded = await uploadCampaignImage(id, pendingImageBlob);
+      imageUrl = uploaded.imageUrl;
+      imagePath = uploaded.imagePath;
+    }
+
+    const now = Date.now();
+    const campaign = {
+      id,
+      ownerUid: currentUser.uid,
+      name: $("campaignName").value.trim(),
+      startDate: $("startDate").value,
+      endDate: $("endDate").value,
+      imageUrl,
+      imagePath,
+      shareId: originalCampaign?.shareId || "",
+      ...readMetricsFromForm(),
+      createdAt: originalCampaign?.createdAt || now,
+      updatedAt: now
+    };
+
+    if (!campaign.name) return;
+    if (campaign.endDate < campaign.startDate) {
+      alert("A data final não pode ser anterior à data inicial.");
+      return;
+    }
+
+    await setDoc(doc(db, "campaigns", id), campaign);
+
+    if (campaign.shareId) {
+      await setDoc(doc(db, "sharedCampaigns", campaign.shareId), publicSnapshot(campaign));
+    }
+
+    hideModal("editorModal");
+    $("campaignForm").reset();
+    $("imageInput").value = "";
+    pendingImageBlob = null;
+    pendingImagePreview = "";
+    editingId = null;
+    originalCampaign = null;
+    await loadCampaigns();
+  } catch (err) {
+    console.error(err);
+    alert("Não foi possível salvar no Firebase. Confira Firestore, Storage e as regras do projeto.");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Salvar campanha";
+  }
+}
 
 function showModal(id) {
   const modal = $(id);
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  if (!document.body.classList.contains("shared-mode")) document.body.style.overflow = "hidden";
 }
 
 function hideModal(id) {
   const modal = $(id);
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
 }
 
-document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => hideModal(btn.dataset.close)));
-document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', e => { if (e.target === modal) hideModal(modal.id); }));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal:not(.hidden)').forEach(m => hideModal(m.id)); });
-
-$('newCampaignBtn').addEventListener('click', () => openEditor());
-$('emptyNewBtn').addEventListener('click', () => openEditor());
-
-$('campaignList').addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const c = campaigns.find(x => x.id === btn.dataset.id);
-  if (!c) return;
-  if (btn.dataset.action === 'view') openDetail(c);
-  if (btn.dataset.action === 'edit') openEditor(c);
-  if (btn.dataset.action === 'delete') {
-    if (confirm(`Excluir a campanha “${c.name}”?`)) {
-      campaigns = campaigns.filter(x => x.id !== c.id);
-      persist();
-      render();
-    }
-  }
-});
-
 function printReport() {
-  const appShell = document.querySelector('.app-shell');
+  const appShell = document.querySelector(".app-shell");
   const previousDisplay = appShell.style.display;
-  appShell.style.display = 'none';
-
+  appShell.style.display = "none";
   const restore = () => {
     appShell.style.display = previousDisplay;
-    window.removeEventListener('afterprint', restore);
+    window.removeEventListener("afterprint", restore);
   };
-
-  window.addEventListener('afterprint', restore);
+  window.addEventListener("afterprint", restore);
   requestAnimationFrame(() => {
     window.print();
     setTimeout(restore, 100);
   });
 }
 
-function openDetail(c) {
+function openDetail(c, readOnly = false) {
   const m = calculate(c);
   const funnelMax = Math.max(+c.views || 0, +c.reach || 0, m.interactions || 0, +c.clicks || 0, 1);
   const bar = (label, value) => `
     <div class="bar-row"><span>${label}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(value/funnelMax)*100)}%"></div></div><div class="bar-value">${fmtNumber(value)}</div></div>`;
-  const storyMedia = c.image
-    ? `<img src="${c.image}" alt="Criativo da campanha ${safe(c.name)}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:18px;">`
+  const storyMedia = c.imageUrl
+    ? `<img src="${c.imageUrl}" alt="Criativo da campanha ${safe(c.name)}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:18px;">`
     : `<div style="width:100%;height:100%;display:grid;place-items:center;color:#9ca3af;background:#f3f4f6;border-radius:18px;">Sem imagem</div>`;
 
-  $('detailContent').innerHTML = `
+  const actions = readOnly ? "" : `
+    <div class="detail-actions">
+      <button class="btn btn-primary" id="printReportBtn">Imprimir / Salvar PDF</button>
+      <button class="btn btn-ghost" id="shareReportBtn">Compartilhar campanha</button>
+      <button class="btn btn-ghost" id="detailEditBtn">Editar campanha</button>
+    </div>`;
+
+  $("detailContent").innerHTML = `
     <div class="detail-grid">
       <div class="detail-story" style="overflow:hidden;background:#f3f4f6;">${storyMedia}</div>
       <div>
@@ -281,36 +341,215 @@ function openDetail(c) {
           <div class="detail-kpi"><span>INVESTIMENTO</span><b>${fmtMoney(c.spend)}</b></div>
           <div class="detail-kpi"><span>CPC</span><b>${fmtMoney(m.cpc)}</b></div>
           <div class="detail-kpi"><span>CPM</span><b>${fmtMoney(m.cpm)}</b></div>
-          <div class="detail-kpi"><span>FREQUÊNCIA</span><b>${m.frequency.toFixed(2).replace('.', ',')}x</b></div>
+          <div class="detail-kpi"><span>FREQUÊNCIA</span><b>${m.frequency.toFixed(2).replace(".", ",")}x</b></div>
           <div class="detail-kpi"><span>VISITAS AO PERFIL</span><b>${fmtNumber(c.profileVisits)}</b></div>
           <div class="detail-kpi"><span>NOVOS SEGUIDORES</span><b>${fmtNumber(c.followers)}</b></div>
           <div class="detail-kpi"><span>CONVERSÃO EM SEGUIDORES</span><b>${fmtPct(m.followRate)}</b></div>
         </div>
-        <div class="funnel"><h4>Funil de desempenho</h4>${bar('Visualizações', +c.views || 0)}${bar('Alcance', +c.reach || 0)}${bar('Interações', m.interactions)}${bar('Cliques', +c.clicks || 0)}</div>
-        <div class="detail-actions"><button class="btn btn-primary" id="printReportBtn">Imprimir / Salvar PDF</button><button class="btn btn-ghost" id="detailEditBtn">Editar campanha</button></div>
+        <div class="funnel"><h4>Funil de desempenho</h4>${bar("Visualizações", +c.views || 0)}${bar("Alcance", +c.reach || 0)}${bar("Interações", m.interactions)}${bar("Cliques", +c.clicks || 0)}</div>
+        ${actions}
       </div>
     </div>`;
-  showModal('detailModal');
-  $('printReportBtn').addEventListener('click', printReport);
-  $('detailEditBtn').addEventListener('click', () => { hideModal('detailModal'); openEditor(c); });
+
+  showModal("detailModal");
+
+  if (!readOnly) {
+    $("printReportBtn").addEventListener("click", printReport);
+    $("shareReportBtn").addEventListener("click", () => shareCampaign(c));
+    $("detailEditBtn").addEventListener("click", () => {
+      hideModal("detailModal");
+      openEditor(c);
+    });
+  }
 }
 
-$('demoBtn').addEventListener('click', () => {
-  if (campaigns.length && !confirm('Adicionar uma campanha de exemplo sem apagar as suas campanhas?')) return;
-  const demo = {
-    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-demo`,
-    name: 'Story — Campanha Setembro',
-    startDate: todayISO(), endDate: todayISO(), image: '',
-    views: 6320, reach: 5000, likes: 230, replies: 20, shares: 40, clicks: 150,
-    profileVisits: 82, followers: 23, spend: 100,
-    createdAt: Date.now(), updatedAt: Date.now()
-  };
-  campaigns.push(demo); persist(); render(); openDetail(demo);
+async function shareCampaign(c) {
+  try {
+    let shareId = c.shareId;
+    if (!shareId) {
+      shareId = crypto.randomUUID().replaceAll("-", "").slice(0, 16);
+      c.shareId = shareId;
+      c.updatedAt = Date.now();
+      await setDoc(doc(db, "campaigns", c.id), c);
+    }
+
+    await setDoc(doc(db, "sharedCampaigns", shareId), publicSnapshot(c));
+    const url = `${location.origin}${location.pathname}?campanha=${encodeURIComponent(shareId)}`;
+
+    if (navigator.share) {
+      await navigator.share({ title: c.name, text: "Confira os resultados desta campanha:", url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("Link da campanha copiado.");
+    }
+
+    await loadCampaigns();
+  } catch (err) {
+    if (err?.name === "AbortError") return;
+    console.error(err);
+    alert("Não foi possível gerar o link compartilhável.");
+  }
+}
+
+async function deleteCampaign(c) {
+  if (!confirm(`Excluir a campanha “${c.name}”?`)) return;
+  try {
+    await deleteDoc(doc(db, "campaigns", c.id));
+    if (c.shareId) await deleteDoc(doc(db, "sharedCampaigns", c.shareId));
+    if (c.imagePath) {
+      try { await deleteObject(ref(storage, c.imagePath)); } catch {}
+    }
+    await loadCampaigns();
+  } catch (err) {
+    console.error(err);
+    alert("Não foi possível excluir a campanha.");
+  }
+}
+
+async function migrateLegacyData() {
+  if (localStorage.getItem(MIGRATION_KEY) === "done") return;
+  let old = [];
+  try { old = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY)) || []; } catch {}
+  if (!old.length) {
+    localStorage.setItem(MIGRATION_KEY, "done");
+    return;
+  }
+
+  for (const item of old) {
+    const id = String(item.id || crypto.randomUUID()).replaceAll("/", "-");
+    let imageUrl = "";
+    let imagePath = "";
+    if (item.image?.startsWith("data:image/")) {
+      const blob = await (await fetch(item.image)).blob();
+      const uploaded = await uploadCampaignImage(id, blob);
+      imageUrl = uploaded.imageUrl;
+      imagePath = uploaded.imagePath;
+    }
+    const now = Date.now();
+    const migrated = {
+      id,
+      ownerUid: currentUser.uid,
+      name: item.name || "Campanha",
+      startDate: item.startDate || todayISO(),
+      endDate: item.endDate || item.startDate || todayISO(),
+      views: +item.views || 0,
+      reach: +item.reach || 0,
+      likes: +item.likes || 0,
+      replies: +item.replies || 0,
+      shares: +item.shares || 0,
+      clicks: +item.clicks || 0,
+      profileVisits: +item.profileVisits || 0,
+      followers: +item.followers || 0,
+      spend: +item.spend || 0,
+      imageUrl,
+      imagePath,
+      shareId: "",
+      createdAt: item.createdAt || now,
+      updatedAt: item.updatedAt || now
+    };
+    await setDoc(doc(db, "campaigns", id), migrated, { merge: true });
+  }
+
+  localStorage.setItem(MIGRATION_KEY, "done");
+}
+
+async function loadSharedCampaign(shareId) {
+  document.body.classList.add("shared-mode");
+  setInteractive(false);
+  try {
+    const snap = await getDoc(doc(db, "sharedCampaigns", shareId));
+    if (!snap.exists()) {
+      $("detailContent").innerHTML = '<div style="padding:48px;text-align:center"><h2>Campanha não encontrada</h2><p class="muted">Este link pode ter expirado ou a campanha foi removida.</p></div>';
+      showModal("detailModal");
+      return;
+    }
+    const campaign = { shareId, ...snap.data() };
+    document.title = `${campaign.name} • Story Ads Lab`;
+    openDetail(campaign, true);
+  } catch (err) {
+    console.error(err);
+    $("detailContent").innerHTML = '<div style="padding:48px;text-align:center"><h2>Não foi possível abrir a campanha</h2><p class="muted">Verifique as regras do Firestore e tente novamente.</p></div>';
+    showModal("detailModal");
+  }
+}
+
+async function startPrivateApp() {
+  setInteractive(false);
+  $("campaignCountLabel").textContent = "Conectando ao Firebase...";
+  try {
+    const credential = await signInAnonymously(auth);
+    currentUser = credential.user;
+    await migrateLegacyData();
+    await loadCampaigns();
+    setInteractive(true);
+  } catch (err) {
+    console.error(err);
+    $("campaignCountLabel").textContent = "Firebase não conectado";
+    alert("Ative a Autenticação Anônima no Firebase e publique as regras do Firestore/Storage.");
+  }
+}
+
+document.querySelectorAll(".metric-input").forEach(el => el.addEventListener("input", updateCalculator));
+
+$("imageInput").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return alert("Selecione um arquivo de imagem.");
+  try {
+    const processed = await compressImage(file);
+    pendingImageBlob = processed.blob;
+    pendingImagePreview = processed.preview;
+    setPreview(pendingImagePreview);
+  } catch {
+    alert("Não foi possível processar essa imagem.");
+  }
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+$("campaignForm").addEventListener("submit", saveCampaign);
+$("newCampaignBtn").addEventListener("click", () => openEditor());
+$("emptyNewBtn").addEventListener("click", () => openEditor());
+
+$("demoBtn").addEventListener("click", () => {
+  openEditor();
+  $("campaignName").value = "Story — Campanha Setembro";
+  $("views").value = 6320;
+  $("reach").value = 5000;
+  $("likes").value = 230;
+  $("replies").value = 20;
+  $("shares").value = 40;
+  $("clicks").value = 150;
+  $("profileVisits").value = 82;
+  $("followers").value = 23;
+  $("spend").value = 100;
+  updateCalculator();
+});
+
+$("campaignList").addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const c = campaigns.find(x => x.id === btn.dataset.id);
+  if (!c) return;
+  if (btn.dataset.action === "view") openDetail(c);
+  if (btn.dataset.action === "share") await shareCampaign(c);
+  if (btn.dataset.action === "edit") openEditor(c);
+  if (btn.dataset.action === "delete") await deleteCampaign(c);
+});
+
+document.querySelectorAll("[data-close]").forEach(btn => btn.addEventListener("click", () => hideModal(btn.dataset.close)));
+document.querySelectorAll(".modal").forEach(modal => modal.addEventListener("click", e => {
+  if (e.target === modal && !document.body.classList.contains("shared-mode")) hideModal(modal.id);
+}));
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !document.body.classList.contains("shared-mode")) {
+    document.querySelectorAll(".modal:not(.hidden)").forEach(m => hideModal(m.id));
+  }
+});
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
 
-render();
 updateCalculator();
+
+if (sharedIdFromUrl) loadSharedCampaign(sharedIdFromUrl);
+else startPrivateApp();
