@@ -1,0 +1,11 @@
+{
+  "name": "Story Ads Lab",
+  "short_name": "Story Ads",
+  "description": "Painel de desempenho de Stories e campanhas digitais.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#111827",
+  "lang": "pt-BR"
+}
