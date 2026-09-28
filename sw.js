@@ -1,4 +1,4 @@
-const CACHE_NAME = "story-ads-lab-firebase-v3";
+const CACHE_NAME = "story-ads-lab-firebase-v4";
 const ASSETS = ["./", "./index.html", "./app.js", "./firebase-config.js", "./manifest.json"];
 
 self.addEventListener("install", event => {
