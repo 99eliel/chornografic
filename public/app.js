@@ -17,7 +17,7 @@ const storage = getStorage(firebaseApp);
 const LEGACY_STORAGE_KEY = "storyAdsLab.campaigns.v1";
 const MIGRATION_KEY = "storyAdsLab.firebaseMigration.v1";
 const PROJECTION_RATE = 0.05;
-const PROJECTION_INTERVAL_HOURS = 4;
+const PROJECTION_INTERVAL_HOURS = 24;
 const PROJECTION_INTERVAL_MS = PROJECTION_INTERVAL_HOURS * 60 * 60 * 1000;
 const PROJECTED_METRICS = ["views","reach","likes","replies","shares","clicks","profileVisits","followers"];
 const $ = (id) => document.getElementById(id);
@@ -92,6 +92,13 @@ function updateCalculator() {
   $("calcCpc").textContent = fmtMoney(m.cpc);
 }
 
+function updateProjectionExplanation() {
+  const note = document.querySelector(".projection-editor-note");
+  if (note) {
+    note.innerHTML = "<b>Projeção automática:</b> as métricas de volume partem dos valores informados e crescem 5% ao dia. O Firestore preserva os valores-base; painel, relatório e link compartilhado calculam a projeção pelo tempo decorrido.";
+  }
+}
+
 function formatDate(value) {
   if (!value) return "—";
   const [y,m,d] = value.split("-");
@@ -144,7 +151,7 @@ function render() {
           <span>👁 <b>${fmtNumber(projected.views)}</b> visualizações</span>
           <span>◎ <b>${fmtNumber(projected.reach)}</b> alcance</span>
           <span>↗ <b>${fmtPct(m.engagement)}</b> engajamento</span>
-          <span>⏱ <b>+5%</b> a cada 4h</span>
+          <span>⏱ <b>+5%</b> ao dia</span>
         </div>
       </div>
       <div class="card-actions">
@@ -245,8 +252,8 @@ function publicSnapshot(campaign) {
     spend: +campaign.spend || 0,
     imageUrl: campaign.imageUrl || "",
     projectionEnabled: campaign.projectionEnabled !== false,
-    projectionRate: Number(campaign.projectionRate) || 5,
-    projectionIntervalHours: Number(campaign.projectionIntervalHours) || 4,
+    projectionRate: 5,
+    projectionIntervalHours: 24,
     projectionStartedAt: Number(campaign.projectionStartedAt) || Number(campaign.createdAt) || Date.now(),
     updatedAt: Date.now()
   };
@@ -284,7 +291,7 @@ async function saveCampaign(e) {
       ...readMetricsFromForm(),
       projectionEnabled: true,
       projectionRate: 5,
-      projectionIntervalHours: 4,
+      projectionIntervalHours: 24,
       projectionStartedAt: originalCampaign?.projectionStartedAt || now,
       createdAt: originalCampaign?.createdAt || now,
       updatedAt: now
@@ -360,7 +367,7 @@ function openDetail(c, readOnly = false) {
 
   const projectionNote = readOnly
     ? ""
-    : `<div class="projection-note">Projeção automática • +5% a cada 4 horas • ${projected.projectionBlocks} ciclo(s) decorridos</div>`;
+    : `<div class="projection-note">Projeção automática • +5% ao dia • ${projected.projectionBlocks} ciclo(s) diário(s) decorridos</div>`;
   const viewsLabel = readOnly ? "VISUALIZAÇÕES" : "VISUALIZAÇÕES PROJETADAS";
   const reachLabel = readOnly ? "ALCANCE" : "ALCANCE PROJETADO";
   const funnelTitle = readOnly ? "Funil de desempenho" : "Funil de desempenho projetado";
@@ -445,7 +452,7 @@ async function shareCampaign(c) {
 }
 
 async function deleteCampaign(c) {
-  if (!confirm(`Excluir a campanha “${c.name}”?`)) return;
+  if (!confirm(`Excluir a campanha “${c.name}”?”`)) return;
   try {
     await deleteDoc(doc(db, "campaigns", c.id));
     if (c.shareId) await deleteDoc(doc(db, "sharedCampaigns", c.shareId));
@@ -499,7 +506,7 @@ async function migrateLegacyData() {
       shareId: "",
       projectionEnabled: true,
       projectionRate: 5,
-      projectionIntervalHours: 4,
+      projectionIntervalHours: 24,
       projectionStartedAt: now,
       createdAt: item.createdAt || now,
       updatedAt: item.updatedAt || now
@@ -606,6 +613,7 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
 
+updateProjectionExplanation();
 updateCalculator();
 
 if (sharedIdFromUrl) loadSharedCampaign(sharedIdFromUrl);
