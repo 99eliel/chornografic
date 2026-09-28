@@ -15,19 +15,19 @@ Painel web para cadastro, análise e compartilhamento de campanhas de Stories.
 As métricas de volume usam uma projeção temporal claramente identificada na interface.
 
 - Taxa: **5%**
-- Intervalo: **a cada 4 horas**
+- Intervalo: **1 vez por dia (a cada 24 horas)**
 - Valores projetados: visualizações, alcance, curtidas, respostas, compartilhamentos, cliques, visitas ao perfil e seguidores.
 - Investimento permanece fixo.
 - O Firestore armazena os **valores-base** e o instante inicial da projeção.
-- O navegador calcula a projeção no momento em que a campanha é aberta, portanto não é necessário executar tarefas agendadas nem gravar novos valores no banco a cada quatro horas.
+- O navegador calcula a projeção no momento em que a campanha é aberta, portanto não é necessário executar tarefas agendadas nem gravar novos valores no banco diariamente.
 
 Fórmula:
 
 ```
-valorProjetado = valorBase × (1,05 ^ blocosDe4Horas)
+valorProjetado = valorBase × (1,05 ^ diasCompletos)
 ```
 
-Exemplo: 100 visualizações tornam-se aproximadamente 134 após 24 horas (6 blocos de 4 horas).
+Exemplo: 100 visualizações tornam-se 105 após 24 horas, aproximadamente 110 após 48 horas e aproximadamente 116 após 72 horas.
 
 ## Estrutura de dados
 
